@@ -107,6 +107,15 @@ def cmd_doctor(args, state: State, out: Callable[[str], None]) -> int:
         "clear it for this window (see `agentroute launch`)",
     )
 
+    if redirect is None:
+        leftover = leftover_credentials(os.environ)
+        check(
+            not leftover,
+            "No leftover gateway credentials for the main session",
+            f"{' and '.join(leftover)} would override your Anthropic login with a "
+            "credential for another service; clear it for this window (see `agentroute launch`)",
+        )
+
     problems = preflight_env(os.environ)
     check(not problems, "No disallowed LiteLLM features configured", "; ".join(problems))
 
@@ -172,6 +181,24 @@ def main_session_redirect(env) -> str | None:
     return url
 
 
+def leftover_credentials(env) -> list[str]:
+    """Names (never values) of credentials that would replace the user's
+    Anthropic login for the main session but don't look like Anthropic ones.
+
+    Only meaningful when the main session talks to Anthropic (no redirect).
+    ANTHROPIC_AUTH_TOKEN is a gateway bearer token; with no gateway it makes
+    Anthropic reject the session (401) even after /login. ANTHROPIC_API_KEY is
+    fine when it is a real Anthropic key (sk-ant-...).
+    """
+    found = []
+    if env.get("ANTHROPIC_AUTH_TOKEN", "").strip():
+        found.append("ANTHROPIC_AUTH_TOKEN")
+    api_key = env.get("ANTHROPIC_API_KEY", "").strip()
+    if api_key and not api_key.startswith("sk-ant-"):
+        found.append("ANTHROPIC_API_KEY")
+    return found
+
+
 def _key_looks_valid(key: str) -> bool:
     return key.startswith("nvapi-") and len(key) > 40
 
@@ -207,6 +234,20 @@ def cmd_launch(args, state: State, out: Callable[[str], None], ask: Callable[[st
             "  PowerShell: Remove-Item Env:ANTHROPIC_BASE_URL, Env:ANTHROPIC_AUTH_TOKEN\n"
             "  bash:       unset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN\n"
             "If this gateway is deliberate, pass --keep-base-url."
+        )
+        return 1
+    leftover = [] if redirect else leftover_credentials(os.environ)
+    if leftover and not args.keep_base_url:
+        names = " and ".join(leftover)
+        items = ", ".join(f"Env:{n}" for n in leftover)
+        out(
+            f"{names} is set but doesn't look like an Anthropic credential (often left "
+            "over from an Ollama or gateway setup). It would replace your Anthropic "
+            "login and Claude would fail with \"401 Invalid bearer token\".\n"
+            "Clear it for this window, then launch again:\n"
+            f"  PowerShell: Remove-Item {items}\n"
+            f"  bash:       unset {' '.join(leftover)}\n"
+            "If it is deliberate, pass --keep-base-url."
         )
         return 1
     user_args = list(args.claude_args)
@@ -349,7 +390,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_launch.add_argument(
         "--keep-base-url",
         action="store_true",
-        help="Start even if ANTHROPIC_BASE_URL points somewhere other than Anthropic.",
+        help="Start even if ANTHROPIC_BASE_URL or a gateway token would send the main session elsewhere.",
     )
     p_launch.add_argument("claude_args", nargs=argparse.REMAINDER)
 

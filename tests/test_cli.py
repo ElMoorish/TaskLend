@@ -126,3 +126,33 @@ def test_stdout_survives_non_cp1252_text():
         sys.stdout = old
         wrapper.detach()
     assert "≈".encode("utf-8") in written
+
+
+def test_leftover_credentials_detection():
+    from agentroute.cli import leftover_credentials
+
+    assert leftover_credentials({}) == []
+    assert leftover_credentials({"ANTHROPIC_API_KEY": "sk-ant-api03-abc"}) == []
+    assert leftover_credentials({"ANTHROPIC_AUTH_TOKEN": "ollama"}) == ["ANTHROPIC_AUTH_TOKEN"]
+    assert leftover_credentials({"ANTHROPIC_API_KEY": "ollama"}) == ["ANTHROPIC_API_KEY"]
+
+
+def test_launch_refuses_leftover_token_without_printing_it(monkeypatch):
+    _ready(monkeypatch)
+    monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
+    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "secret-ollama-token")
+    monkeypatch.setattr("agentroute.launch.run_launch", lambda *a, **k: 0)
+    code, out = run(["launch"])
+    assert code == 1
+    assert "Remove-Item Env:ANTHROPIC_AUTH_TOKEN" in out
+    assert "secret-ollama-token" not in out
+
+
+def test_doctor_flags_leftover_token_without_printing_it(monkeypatch):
+    _ready(monkeypatch)
+    monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
+    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "secret-ollama-token")
+    monkeypatch.setattr("agentroute.cli.hosted_model_ids", lambda key: set())
+    _, out = run(["doctor"])
+    assert "[fail] ANTHROPIC_AUTH_TOKEN" in out
+    assert "secret-ollama-token" not in out
