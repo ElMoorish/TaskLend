@@ -22,3 +22,12 @@ litellm_config.local.yaml
 Thumbs.db
 .vscode/
 .idea/
+
+# Benchmark: raw captures, run logs and working files stay local
+bench/logs/
+bench/media/raw/
+bench/media/sheets/
+bench/media/final/stills/
+bench/media/final/*
+!bench/media/final/tasklend-dispatch.gif
+!bench/media/final/tasklend-launch-1080p.mp4
