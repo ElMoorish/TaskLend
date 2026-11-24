@@ -1,11 +1,71 @@
 # Tasklend
 
-Tasklend is a Python command-line tool that works with Claude Code. Claude
-stays the orchestrator under your own Anthropic login, and worker subagents
-(explore, plan, code, research) run on open models through a local LiteLLM
-proxy and NVIDIA NIM, with fallbacks.
+**Let your coding agent delegate the grunt work to open models, and check the results.**
 
-> Status: pre-alpha. Not yet tested end to end against NVIDIA's API.
+![Status: pre-alpha](https://img.shields.io/badge/status-pre--alpha-orange)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
+![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-green)
+
+> **Pre-alpha.** Tasklend is an independent open-source project. It works with
+> Claude Code but is not affiliated with, endorsed by or sponsored by Anthropic
+> or NVIDIA.
+
+![Claude hands a task to an explore worker, the worker reads the files, Claude checks its claim](bench/media/final/tasklend-dispatch.gif)
+
+*The dispatch scene is animated from a real session log. Full 52-second video:
+[tasklend-launch-1080p.mp4](bench/media/final/tasklend-launch-1080p.mp4).*
+
+Claude Code stays in charge, under your own Anthropic login. When a task is
+self-contained, such as reading a codebase, drafting a plan or writing
+boilerplate, Claude hands it to a worker running on an open model (NVIDIA
+Nemotron by default). The worker sends back a short report, and Claude checks
+its claims before using them.
+
+> **NVIDIA's free API tier is for trials, not production or company code.**
+> It may use your prompts and outputs to train models. Read
+> [the free tier notice](#before-you-start-the-nvidia-free-tier) before you
+> start.
+
+## Quickstart
+
+```
+uv sync --locked
+uv run tasklend init
+uv run tasklend launch
+```
+
+In the Claude Desktop app, run `uv run tasklend install-skill` once instead.
+You need an `NVIDIA_NIM_API_KEY` in your environment. Details are under
+[Install](#install).
+
+## Why use it
+
+- **Keep the main context clean.** Workers read the files; Claude gets a capped
+  summary instead of the raw source.
+- **Spend less of your main model's usage** on reading and boilerplate.
+- **Claude verifies.** In the demo run, the worker reported a bug that turned
+  out to be a false alarm, and Claude caught it by checking the code.
+- **Careful by design.** Your Anthropic login never passes through Tasklend, the
+  proxy listens only on `127.0.0.1`, and LiteLLM is pinned to an exact version.
+
+### One measured example
+
+One task (explain how this repo starts its proxy and runs preflight, list the
+files, name one bug), Claude Sonnet 5.5, two runs each, on this repo of about
+1,400 lines:
+
+| Average of 2 runs | Plain Claude Code | With Tasklend | Change |
+| --- | --- | --- | --- |
+| Main-session tokens | 261k | 177k | 32% fewer |
+| List cost (USD) | 0.231 | 0.198 | 15% less |
+| Final context | 63.2k | 58.6k | 7% smaller |
+| Wall time | 30 s | 167 s | **5.6x slower** |
+
+All four answers found the right files and named a real bug. This is one task,
+not a general promise: the saving should grow with the amount of code a task
+reads, but that is not measured yet, and the free NVIDIA worker is much slower.
+Method, raw numbers and scripts: [bench/RESULTS.md](bench/RESULTS.md). The
+benchmark ran before the rename, so it still says AgentRoute.
 
 ## How it works
 
@@ -63,7 +123,7 @@ there. Instead, run this once in a terminal:
 uv run tasklend install-skill
 ```
 
-It adds an `tasklend` skill to your Claude Code skills folder, so every
+It adds a `tasklend` skill to your Claude Code skills folder, so every
 session, including the Desktop app's, knows how to dispatch workers. Outside
 `launch`, each worker starts its own private proxy and stops it when done,
 which adds about 15 seconds per worker. Remove the skill with
@@ -94,6 +154,12 @@ are in [MODEL_LICENSES.md](MODEL_LICENSES.md).
 - Stopped, and its temporary files deleted, when Claude Code exits.
 - LiteLLM pinned to exactly `1.106.3`, installed from `uv.lock` with hashes.
   See [SECURITY.md](SECURITY.md).
+
+## Known limits
+
+- Pre-alpha: tested on one Windows PC so far.
+- Workers on the NVIDIA free tier are slow (minutes, not seconds) and rate limited.
+- Each worker started from the Desktop app adds about 15 seconds to start its own proxy.
 
 ## License
 
