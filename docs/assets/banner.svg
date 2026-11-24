@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-label="Tasklend: a lead coding agent hands tasks to explore, plan, code and research workers">
+  <style>
+    :root { --bg:#f7f6f2; --ink:#1d1d1b; --muted:#5f5e59; --line:#c9c6bc; --lead:#d9572b; --worker:#2f6f73; --card:#ffffff; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#16181c; --ink:#f1efe8; --muted:#a6a39a; --line:#3d4047; --lead:#f07a4b; --worker:#5fb3b3; --card:#1f2228; }
+    }
+    .bg { fill: var(--bg); }
+    .title { font: 700 76px ui-sans-serif, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--ink); letter-spacing: -1.5px; }
+    .tag { font: 400 24px ui-sans-serif, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--muted); }
+    .lbl { font: 600 17px ui-monospace, "SFMono-Regular", Consolas, Menlo, monospace; }
+    .edge { stroke: var(--line); stroke-width: 2.5; fill: none; }
+    .back { stroke: var(--worker); stroke-width: 2; fill: none; stroke-dasharray: 5 6; opacity: .7; }
+    .lead { fill: var(--lead); }
+    .wk { fill: var(--card); stroke: var(--worker); stroke-width: 2.5; }
+    .wtxt { fill: var(--worker); }
+    .ltxt { fill: #ffffff; }
+  </style>
+  <rect class="bg" width="1200" height="300" rx="20"/>
+  <text class="title" x="64" y="150">Tasklend</text>
+  <text class="tag" x="66" y="196">Your coding agent leads.</text>
+  <text class="tag" x="66" y="228">Open-model workers do the legwork.</text>
+
+  <!-- edges: lead to workers -->
+  <path class="edge" d="M800 150 C 860 150, 860 60, 920 60"/>
+  <path class="edge" d="M800 150 C 860 150, 860 120, 920 120"/>
+  <path class="edge" d="M800 150 C 860 150, 860 180, 920 180"/>
+  <path class="edge" d="M800 150 C 860 150, 860 240, 920 240"/>
+
+  <!-- lead node -->
+  <rect class="lead" x="640" y="120" width="160" height="60" rx="30"/>
+  <text class="lbl ltxt" x="720" y="156" text-anchor="middle">lead agent</text>
+
+  <!-- workers -->
+  <g>
+    <rect class="wk" x="920" y="38" width="200" height="44" rx="22"/>
+    <text class="lbl wtxt" x="1020" y="66" text-anchor="middle">explore</text>
+    <rect class="wk" x="920" y="98" width="200" height="44" rx="22"/>
+    <text class="lbl wtxt" x="1020" y="126" text-anchor="middle">plan</text>
+    <rect class="wk" x="920" y="158" width="200" height="44" rx="22"/>
+    <text class="lbl wtxt" x="1020" y="186" text-anchor="middle">code</text>
+    <rect class="wk" x="920" y="218" width="200" height="44" rx="22"/>
+    <text class="lbl wtxt" x="1020" y="246" text-anchor="middle">research</text>
+  </g>
+  <!-- verify loop -->
+  <path class="back" d="M920 270 C 820 290, 720 260, 720 186"/>
+  <text class="lbl" x="770" y="292" text-anchor="middle" style="fill:var(--worker);font-size:14px">reports back, lead verifies</text>
+</svg>
