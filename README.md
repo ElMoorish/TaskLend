@@ -2,6 +2,7 @@
 
 **Let your coding agent delegate the grunt work to open models, and check the results.**
 
+[![tests](https://github.com/ElMoorish/tasklend/actions/workflows/tests.yml/badge.svg)](https://github.com/ElMoorish/tasklend/actions/workflows/tests.yml)
 ![Status: pre-alpha](https://img.shields.io/badge/status-pre--alpha-orange)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
 ![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-green)
