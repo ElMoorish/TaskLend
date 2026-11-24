@@ -22,6 +22,7 @@ from typing import Mapping
 ENV_PROXY_URL = "AGENTROUTE_PROXY_URL"
 ENV_SESSION_KEY = "AGENTROUTE_SESSION_KEY"
 ENV_SESSION_DIR = "AGENTROUTE_SESSION_DIR"
+ENV_PROFILE = "AGENTROUTE_PROFILE"
 
 # Anything that could carry the user's Anthropic credentials or redirect auth.
 CREDENTIAL_ENV = (
@@ -83,7 +84,12 @@ class WorkerError(RuntimeError):
 
 
 def worker_env(
-    base: Mapping[str, str], role: Role, proxy_url: str, session_key: str, config_dir: Path
+    base: Mapping[str, str],
+    role: Role,
+    proxy_url: str,
+    session_key: str,
+    config_dir: Path,
+    context_tokens: int | None = None,
 ) -> dict[str, str]:
     env = {k: v for k, v in base.items() if k not in CREDENTIAL_ENV and k not in MODEL_ALIAS_ENV}
     env.pop(ENV_SESSION_KEY, None)
@@ -92,6 +98,9 @@ def worker_env(
     env["CLAUDE_CONFIG_DIR"] = str(config_dir)
     for name in MODEL_ALIAS_ENV:
         env[name] = role.name
+    if context_tokens:
+        # Role names are not Claude model ids, so Claude Code can't know the window.
+        env["CLAUDE_CODE_MAX_CONTEXT_TOKENS"] = str(context_tokens)
     env["CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS"] = "1"
     env["DISABLE_TELEMETRY"] = "1"
     env["DISABLE_ERROR_REPORTING"] = "1"
@@ -149,6 +158,19 @@ def run_worker(
         raise WorkerError("Claude Code (`claude`) not found on PATH.")
 
     role = ROLES[role_name]
+    context_tokens = None
+    profile = env.get(ENV_PROFILE)
+    if not profile:  # sessions started by an older launch
+        from .state import State
+
+        profile = State.load().profile
+    if profile:
+        from .profiles import role_context_tokens
+
+        try:
+            context_tokens = role_context_tokens(profile, role.name)
+        except (ValueError, KeyError):
+            context_tokens = None
     cwd = cwd or Path.cwd()
     session = Path(session_dir)
     config_dir = session / "worker-home"
@@ -159,7 +181,7 @@ def run_worker(
     try:
         proc = subprocess.run(
             worker_args(claude, role, task, cwd),
-            env=worker_env(env, role, proxy_url, session_key, config_dir),
+            env=worker_env(env, role, proxy_url, session_key, config_dir, context_tokens),
             cwd=cwd,
             capture_output=True,
             text=True,

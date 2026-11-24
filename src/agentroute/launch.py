@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Mapping, Sequence
 
 from .runtime import ProxySession
-from .worker import ENV_PROXY_URL, ENV_SESSION_DIR, ENV_SESSION_KEY, ROLES
+from .worker import ENV_PROFILE, ENV_PROXY_URL, ENV_SESSION_DIR, ENV_SESSION_KEY, ROLES
 
 
 def work_command() -> str:
@@ -55,6 +55,7 @@ def main_env(base: Mapping[str, str], session: ProxySession, session_dir: Path) 
     env[ENV_PROXY_URL] = session.base_url
     env[ENV_SESSION_KEY] = session.master_key
     env[ENV_SESSION_DIR] = str(session_dir)
+    env[ENV_PROFILE] = session.profile
     return env
 
 

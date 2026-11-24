@@ -30,6 +30,8 @@ class Model:
     license_url: str | None = None
     # Informational notice shown in `agentroute init` when the model is in use.
     notice: str | None = None
+    # Context window in tokens, when known. Unknown windows use a safe default.
+    context_tokens: int | None = None
 
 
 # Every id below was on NVIDIA's hosted model list (integrate.api.nvidia.com/v1/models)
@@ -43,6 +45,7 @@ MODELS: dict[str, Model] = {
             "US",
             "OpenMDW-1.1",
             "https://openmdw.ai/license/1-1/",
+            context_tokens=1_000_000,
         ),
         Model("nvidia/nemotron-3-ultra-550b-a55b", "US", "not yet checked"),
         Model("nvidia/nemotron-3.5-lightning-30b-a3b", "US", "not yet checked"),
@@ -107,6 +110,15 @@ def models_in(profile: str) -> list[Model]:
         for model_id in ids:
             seen.setdefault(model_id, MODELS[model_id])
     return list(seen.values())
+
+
+DEFAULT_CONTEXT_TOKENS = 128_000
+
+
+def role_context_tokens(profile: str, role: str) -> int:
+    """Smallest window among a role's models, so a fallback never overflows."""
+    windows = [MODELS[m].context_tokens or DEFAULT_CONTEXT_TOKENS for m in get_profile(profile)[role]]
+    return min(windows)
 
 
 def notices_for(profile: str) -> list[str]:

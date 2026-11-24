@@ -86,6 +86,7 @@ def test_unsafe_sso_routes():
 class FakeSession:
     base_url = "http://127.0.0.1:4321"
     master_key = "sk-ar-session"
+    profile = "us-eu-origin"
 
 
 def test_main_session_keeps_user_environment(tmp_path):
@@ -110,3 +111,23 @@ def test_orchestrator_prompt_mentions_roles_and_warning():
     for name in worker.ROLES:
         assert name in text
     assert "train" in text
+
+
+def test_worker_env_sets_context_window(tmp_path):
+    env = worker.worker_env({}, ROLE, "http://127.0.0.1:1", "k", tmp_path, 128_000)
+    assert env["CLAUDE_CODE_MAX_CONTEXT_TOKENS"] == "128000"
+    env = worker.worker_env({}, ROLE, "http://127.0.0.1:1", "k", tmp_path)
+    assert "CLAUDE_CODE_MAX_CONTEXT_TOKENS" not in env
+
+
+def test_role_context_is_smallest_window():
+    from agentroute.profiles import DEFAULT_CONTEXT_TOKENS, role_context_tokens
+
+    assert role_context_tokens("permissive", "nim-plan") == 1_000_000
+    # us-eu-origin plan falls back to a model whose window is not yet known
+    assert role_context_tokens("us-eu-origin", "nim-plan") == DEFAULT_CONTEXT_TOKENS
+
+
+def test_main_env_passes_profile(tmp_path):
+    env = main_env({}, FakeSession(), tmp_path)
+    assert env[worker.ENV_PROFILE] == "us-eu-origin"
