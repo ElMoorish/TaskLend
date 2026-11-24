@@ -115,11 +115,14 @@ def test_stdout_survives_non_cp1252_text():
 
     raw = io.BytesIO()
     old = sys.stdout
-    sys.stdout = io.TextIOWrapper(raw, encoding="cp1252")
+    wrapper = io.TextIOWrapper(raw, encoding="cp1252")
+    sys.stdout = wrapper
     try:
         _utf8_stdio()
         print("about ≈ 3 → done")
-        sys.stdout.flush()
+        wrapper.flush()
+        written = raw.getvalue()
     finally:
         sys.stdout = old
-    assert "≈".encode("utf-8") in raw.getvalue()
+        wrapper.detach()
+    assert "≈".encode("utf-8") in written
