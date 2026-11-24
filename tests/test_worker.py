@@ -147,3 +147,14 @@ def test_default_explore_uses_super_vl_first():
     from agentroute.profiles import get_profile
 
     assert get_profile("us-eu-origin")["nim-explore"][0] == "nvidia/nemotron-3.5-super-vl-120b-a12b"
+
+
+def test_main_session_never_gets_nvidia_key(tmp_path):
+    env = main_env({"NVIDIA_NIM_API_KEY": "nvapi-secret", "PATH": "/bin"}, FakeSession(), tmp_path)
+    assert "NVIDIA_NIM_API_KEY" not in env
+    assert "nvapi-secret" not in " ".join(env.values())
+
+
+def test_workers_never_get_nvidia_key(tmp_path):
+    env = worker.worker_env({"NVIDIA_NIM_API_KEY": "nvapi-secret"}, ROLE, "http://127.0.0.1:1", "k", tmp_path)
+    assert "NVIDIA_NIM_API_KEY" not in env

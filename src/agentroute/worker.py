@@ -33,6 +33,8 @@ CREDENTIAL_ENV = (
     "CLAUDE_CODE_USE_BEDROCK",
     "CLAUDE_CODE_USE_VERTEX",
     "CLAUDE_CODE_USE_FOUNDRY",
+    # Workers reach NVIDIA only through the proxy; they never need the key.
+    "NVIDIA_NIM_API_KEY",
 )
 
 MODEL_ALIAS_ENV = (

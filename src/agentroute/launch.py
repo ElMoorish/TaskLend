@@ -17,6 +17,7 @@ import sys
 from pathlib import Path
 from typing import Mapping, Sequence
 
+from .proxy import NVIDIA_KEY_ENV
 from .runtime import ProxySession
 from .worker import ENV_PROFILE, ENV_PROXY_URL, ENV_SESSION_DIR, ENV_SESSION_KEY, ROLES
 
@@ -55,6 +56,9 @@ data, or HIPAA or PCI data in a worker task.
 
 def main_env(base: Mapping[str, str], session: ProxySession, session_dir: Path) -> dict[str, str]:
     env = dict(base)
+    # Only the proxy needs the NVIDIA key. Claude Code passes its environment to
+    # the tools it runs, so keep the key out of the main session entirely.
+    env.pop(NVIDIA_KEY_ENV, None)
     env[ENV_PROXY_URL] = session.base_url
     env[ENV_SESSION_KEY] = session.master_key
     env[ENV_SESSION_DIR] = str(session_dir)
