@@ -79,3 +79,29 @@ def test_doctor_offline_skips_network(monkeypatch):
 
     monkeypatch.setattr("agentroute.cli.hosted_model_ids", boom)
     run(["doctor", "--offline"])
+
+
+def test_main_session_redirect_detection():
+    from agentroute.cli import main_session_redirect
+
+    assert main_session_redirect({}) is None
+    assert main_session_redirect({"ANTHROPIC_BASE_URL": "https://api.anthropic.com"}) is None
+    assert main_session_redirect({"ANTHROPIC_BASE_URL": "http://localhost:11434"}) == "http://localhost:11434"
+    assert main_session_redirect({"ANTHROPIC_BASE_URL": "https://anthropic.com.evil.test"})
+
+
+def test_launch_refuses_redirected_main_session(monkeypatch):
+    _ready(monkeypatch)
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", "http://localhost:11434")
+    monkeypatch.setattr("agentroute.launch.run_launch", lambda *a, **k: 0)
+    code, out = run(["launch"])
+    assert code == 1
+    assert "Remove-Item Env:ANTHROPIC_BASE_URL" in out
+
+
+def test_launch_keep_base_url_overrides(monkeypatch):
+    _ready(monkeypatch)
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", "http://localhost:11434")
+    monkeypatch.setattr("agentroute.launch.run_launch", lambda *a, **k: 0)
+    code, _ = run(["launch", "--keep-base-url"])
+    assert code == 0

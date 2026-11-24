@@ -99,6 +99,14 @@ def cmd_doctor(args, state: State, out: Callable[[str], None]) -> int:
         f"{NVIDIA_KEY_ENV} is missing or does not look like an nvapi- key",
     )
 
+    redirect = main_session_redirect(os.environ)
+    check(
+        redirect is None,
+        "Main Claude session will talk to Anthropic",
+        f"ANTHROPIC_BASE_URL={redirect} sends your main Claude session elsewhere; "
+        "clear it for this window (see `agentroute launch`)",
+    )
+
     problems = preflight_env(os.environ)
     check(not problems, "No disallowed LiteLLM features configured", "; ".join(problems))
 
@@ -151,6 +159,19 @@ def hosted_model_ids(key: str, timeout: float = 15.0) -> set[str]:
     return {m["id"] for m in data.get("data", [])}
 
 
+def main_session_redirect(env) -> str | None:
+    """The base URL if the main session would be sent somewhere other than Anthropic."""
+    from urllib.parse import urlparse
+
+    url = env.get("ANTHROPIC_BASE_URL", "").strip()
+    if not url:
+        return None
+    host = (urlparse(url).hostname or "").lower()
+    if host == "anthropic.com" or host.endswith(".anthropic.com"):
+        return None
+    return url
+
+
 def _key_looks_valid(key: str) -> bool:
     return key.startswith("nvapi-") and len(key) > 40
 
@@ -174,6 +195,17 @@ def cmd_launch(args, state: State, out: Callable[[str], None], ask: Callable[[st
         return 1
     if not _key_looks_valid(os.environ.get(NVIDIA_KEY_ENV, "")):
         out(f"Set {NVIDIA_KEY_ENV} to your nvapi- key first.")
+        return 1
+    redirect = main_session_redirect(os.environ)
+    if redirect and not args.keep_base_url:
+        out(
+            f"ANTHROPIC_BASE_URL is set to {redirect}, so your main Claude session would "
+            "not talk to Anthropic. AgentRoute keeps the main session on Anthropic.\n"
+            "Clear it for this window, then launch again:\n"
+            "  PowerShell: Remove-Item Env:ANTHROPIC_BASE_URL, Env:ANTHROPIC_AUTH_TOKEN\n"
+            "  bash:       unset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN\n"
+            "If this gateway is deliberate, pass --keep-base-url."
+        )
         return 1
     user_args = list(args.claude_args)
     if user_args and user_args[0] == "--":
@@ -228,6 +260,11 @@ def build_parser() -> argparse.ArgumentParser:
         "launch",
         help="Start the local proxy and your own Claude Code as the orchestrator.",
         description="Extra arguments after -- are passed to claude unchanged.",
+    )
+    p_launch.add_argument(
+        "--keep-base-url",
+        action="store_true",
+        help="Start even if ANTHROPIC_BASE_URL points somewhere other than Anthropic.",
     )
     p_launch.add_argument("claude_args", nargs=argparse.REMAINDER)
 
