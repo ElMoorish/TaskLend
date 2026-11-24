@@ -1,20 +1,34 @@
-# Tasklend
+<div align="center">
 
-**Let your coding agent delegate the grunt work to open models, and check the results.**
+<img src="docs/assets/banner.svg" alt="Tasklend: a lead coding agent hands tasks to explore, plan, code and research workers" width="100%">
 
-[![tests](https://github.com/ElMoorish/tasklend/actions/workflows/tests.yml/badge.svg)](https://github.com/ElMoorish/tasklend/actions/workflows/tests.yml)
-![Status: pre-alpha](https://img.shields.io/badge/status-pre--alpha-orange)
-![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
-![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-green)
+<p><strong>Let your coding agent delegate the grunt work to open models, and check the results.</strong></p>
+
+<p>
+<a href="https://github.com/ElMoorish/tasklend/actions/workflows/tests.yml"><img src="https://github.com/ElMoorish/tasklend/actions/workflows/tests.yml/badge.svg" alt="tests"></a>
+<img src="https://img.shields.io/badge/status-pre--alpha-orange" alt="Status: pre-alpha">
+<img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="Python 3.11+">
+<a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-green" alt="License: Apache 2.0"></a>
+<a href="https://pypi.org/project/tasklend/"><img src="https://img.shields.io/pypi/v/tasklend?label=pypi&color=blue" alt="PyPI"></a>
+</p>
+
+<p>
+<a href="#quickstart">Quickstart</a> ·
+<a href="#how-it-works">How it works</a> ·
+<a href="#one-measured-example">Results</a> ·
+<a href="#before-you-start-the-nvidia-free-tier">Free tier notice</a> ·
+<a href="CONTRIBUTING.md">Contributing</a>
+</p>
+
+<img src="bench/media/final/tasklend-dispatch.gif" alt="The lead agent hands a task to an explore worker, the worker reads the files, the lead checks its claim" width="90%">
+
+<sub>Dispatch scene animated from a real session log · <a href="bench/media/final/tasklend-launch-1080p.mp4">full 52-second video</a></sub>
+
+</div>
 
 > **Pre-alpha.** Tasklend is an independent open-source project. It works with
 > Claude Code but is not affiliated with, endorsed by or sponsored by Anthropic
 > or NVIDIA.
-
-![Claude hands a task to an explore worker, the worker reads the files, Claude checks its claim](bench/media/final/tasklend-dispatch.gif)
-
-*The dispatch scene is animated from a real session log. Full 52-second video:
-[tasklend-launch-1080p.mp4](bench/media/final/tasklend-launch-1080p.mp4).*
 
 Claude Code stays in charge, under your own Anthropic login. When a task is
 self-contained, such as reading a codebase, drafting a plan or writing
