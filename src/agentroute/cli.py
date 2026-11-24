@@ -94,7 +94,7 @@ def cmd_doctor(args, state: State, out: Callable[[str], None]) -> int:
 
     key = os.environ.get(NVIDIA_KEY_ENV, "")
     check(
-        key.startswith("nvapi-") and len(key) > 40,
+        _key_looks_valid(key),
         f"{NVIDIA_KEY_ENV} is set",
         f"{NVIDIA_KEY_ENV} is missing or does not look like an nvapi- key",
     )
@@ -124,6 +124,56 @@ def cmd_doctor(args, state: State, out: Callable[[str], None]) -> int:
     return 0 if not failures else 1
 
 
+def _key_looks_valid(key: str) -> bool:
+    return key.startswith("nvapi-") and len(key) > 40
+
+
+def cmd_launch(args, state: State, out: Callable[[str], None], ask: Callable[[str], str]) -> int:
+    from .launch import run_launch
+    from .runtime import ProxyError
+
+    if state.profile not in PROFILES:
+        out("No profile chosen yet. Run `agentroute init` first.")
+        return 1
+    if not require_acceptance(state, FREE_TIER_KEY, FREE_TIER_WARNING, input_fn=ask, print_fn=out):
+        return 1
+    state.save()
+    try:
+        installed = metadata.version("litellm")
+    except metadata.PackageNotFoundError:
+        installed = None
+    if installed != LITELLM_PIN:
+        out(f"LiteLLM is {installed or 'not installed'}; AgentRoute needs exactly {LITELLM_PIN}.")
+        return 1
+    if not _key_looks_valid(os.environ.get(NVIDIA_KEY_ENV, "")):
+        out(f"Set {NVIDIA_KEY_ENV} to your nvapi- key first.")
+        return 1
+    user_args = list(args.claude_args)
+    if user_args and user_args[0] == "--":
+        user_args = user_args[1:]
+    try:
+        return run_launch(state.profile, user_args, out=out)
+    except ProxyError as err:
+        out(f"Could not start the proxy: {err}")
+        return 1
+
+
+def cmd_work(args, out: Callable[[str], None]) -> int:
+    from .worker import WorkerError, run_worker
+
+    try:
+        code, output, saved = run_worker(
+            args.role, args.task, os.environ, timeout=args.timeout, output_cap=args.max_chars
+        )
+    except WorkerError as err:
+        out(str(err))
+        return 1
+    out(output.rstrip())
+    out("")
+    out(f"[agentroute] worker {args.role} exited {code}. Full output: {saved}")
+    return code
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="agentroute",
@@ -143,6 +193,26 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("profiles", help="List model profiles and their routes.")
     sub.add_parser("doctor", help="Check that everything is set up.")
+
+    p_launch = sub.add_parser(
+        "launch",
+        help="Start the local proxy and your own Claude Code as the orchestrator.",
+        description="Extra arguments after -- are passed to claude unchanged.",
+    )
+    p_launch.add_argument("claude_args", nargs=argparse.REMAINDER)
+
+    from .worker import DEFAULT_OUTPUT_CAP, ROLES as WORKER_ROLES
+
+    p_work = sub.add_parser(
+        "work", help="Run one worker agent (used by Claude inside `agentroute launch`)."
+    )
+    p_work.add_argument("--role", required=True, choices=list(WORKER_ROLES))
+    p_work.add_argument("--timeout", type=float, default=900, help="Seconds (default 900).")
+    p_work.add_argument(
+        "--max-chars", type=int, default=DEFAULT_OUTPUT_CAP,
+        help=f"Cap on output returned (default {DEFAULT_OUTPUT_CAP}).",
+    )
+    p_work.add_argument("task")
     return parser
 
 
@@ -160,6 +230,10 @@ def main(
         return cmd_profiles(args, state, out)
     if args.command == "doctor":
         return cmd_doctor(args, state, out)
+    if args.command == "launch":
+        return cmd_launch(args, state, out, ask)
+    if args.command == "work":
+        return cmd_work(args, out)
     return 2
 
 

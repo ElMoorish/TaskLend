@@ -115,6 +115,10 @@ def proxy_env(base: Mapping[str, str], master_key: str) -> dict[str, str]:
     }
     env[MASTER_KEY_ENV] = master_key
     env["DISABLE_ADMIN_UI"] = "True"
+    # LiteLLM prints a Unicode banner; on Windows' default cp1252 output that
+    # crashes startup.
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
     return env
 
 

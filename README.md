@@ -5,8 +5,25 @@ stays the orchestrator under your own Anthropic login, and worker subagents
 (explore, plan, code, research) run on open models through a local LiteLLM
 proxy and NVIDIA NIM, with fallbacks.
 
-> Status: pre-alpha. `init`, `profiles` and `doctor` work. Launching Claude Code
-> with routed subagents is not built yet.
+> Status: pre-alpha. Not yet tested end to end against NVIDIA's API.
+
+## How it works
+
+1. `agentroute launch` starts a LiteLLM proxy on `127.0.0.1`, then starts your
+   own `claude`, unmodified. The main session talks straight to Anthropic with
+   your own login; AgentRoute does not proxy, read or store it.
+2. Claude is told it can hand self-contained tasks to workers by running
+   `agentroute work --role explore|plan|code|research "<task>"`.
+3. Each worker is a separate headless Claude Code run (`claude --bare -p`) whose
+   model calls go to the local proxy and on to NVIDIA NIM. In `--bare` mode
+   Claude Code never reads OAuth tokens or the keychain, and the worker's only
+   credential is the proxy's per-session key. Workers get a private config
+   folder, so they never see your Claude login or settings.
+4. Worker output is capped before it returns to Claude (full output is saved
+   to a file), which keeps the main session's context small.
+
+Workers have only the tools their role needs: explore, plan and research are
+read-only; code can also edit files. No worker can run shell commands.
 
 ## Before you start: the NVIDIA free tier
 
@@ -31,7 +48,11 @@ exists, run from a checkout:
 uv sync --locked
 uv run agentroute init
 uv run agentroute doctor
+uv run agentroute launch
 ```
+
+Arguments after `--` go to `claude` unchanged, for example
+`uv run agentroute launch -- --continue`.
 
 `NVIDIA_NIM_API_KEY` must be set in your environment. AgentRoute never writes
 API keys to disk and never reads or stores your Anthropic credentials.
@@ -53,7 +74,9 @@ are in [MODEL_LICENSES.md](MODEL_LICENSES.md).
 - A new random master key for each session, kept in memory and passed to the
   proxy through its environment.
 - No database, admin UI users, SSO, JWT or enterprise licence. AgentRoute
-  refuses to start the proxy if any of these are configured.
+  refuses to start the proxy if any of these are configured, and the admin UI,
+  login and SSO routes answer 404.
+- Stopped, and its temporary files deleted, when Claude Code exits.
 - LiteLLM pinned to exactly `1.106.3`, installed from `uv.lock` with hashes.
   See [SECURITY.md](SECURITY.md).
 
