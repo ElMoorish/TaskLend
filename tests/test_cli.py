@@ -13,7 +13,6 @@ def test_init_defaults_to_us_eu_origin():
     code, out = run(["init"], ["I understand"])
     assert code == 0
     assert State.load().profile == "us-eu-origin"
-    assert "Devstral 2" in out  # informational licence notice
 
 
 def test_init_declined_saves_nothing():
@@ -47,3 +46,36 @@ def test_doctor_reports_missing_setup(monkeypatch):
     code, out = run(["doctor"])
     assert code == 1
     assert "agentroute init" in out
+
+
+def _ready(monkeypatch):
+    monkeypatch.setenv("NVIDIA_NIM_API_KEY", "nvapi-" + "x" * 50)
+    run(["init"], ["I understand"])
+
+
+def test_doctor_flags_models_missing_from_nvidia(monkeypatch):
+    _ready(monkeypatch)
+    monkeypatch.setattr("agentroute.cli.hosted_model_ids", lambda key: {"nvidia/other"})
+    code, out = run(["doctor"])
+    assert code == 1
+    assert "Not on NVIDIA's hosted list" in out
+
+
+def test_doctor_passes_model_check_when_all_hosted(monkeypatch):
+    from agentroute.profiles import models_in
+
+    _ready(monkeypatch)
+    ids = {m.id for m in models_in("us-eu-origin")}
+    monkeypatch.setattr("agentroute.cli.hosted_model_ids", lambda key: ids)
+    _, out = run(["doctor"])
+    assert "All us-eu-origin models are on NVIDIA's hosted list" in out
+
+
+def test_doctor_offline_skips_network(monkeypatch):
+    _ready(monkeypatch)
+
+    def boom(key):
+        raise AssertionError("network used")
+
+    monkeypatch.setattr("agentroute.cli.hosted_model_ids", boom)
+    run(["doctor", "--offline"])

@@ -28,23 +28,13 @@ class Model:
     origin: str  # country of the model's developer: "US", "FR", "CN"
     license: str
     license_url: str | None = None
-    # False until the hosted API id has been checked on build.nvidia.com.
-    id_verified: bool = True
     # Informational notice shown in `agentroute init` when the model is in use.
     notice: str | None = None
 
 
-DEVSTRAL_2_NOTICE = (
-    "Devstral 2 (Mistral Modified MIT licence): you have no rights under this "
-    "licence if your company's, or your employer's, global revenue topped $20M "
-    "in the previous month. Internal use is not exempt. Above that, get a "
-    "commercial licence from Mistral or use Mistral's hosted API."
-)
-KIMI_NOTICE = (
-    "Kimi (Moonshot Modified MIT licence): a product above 100M monthly active "
-    "users or $20M monthly revenue must show Kimi attribution in its UI."
-)
-
+# Every id below was on NVIDIA's hosted model list (integrate.api.nvidia.com/v1/models)
+# on 2026-11-24. `agentroute doctor` re-checks against the live list.
+# Licences marked "not yet checked" must be read on the model card before release.
 MODELS: dict[str, Model] = {
     m.id: m
     for m in [
@@ -53,57 +43,38 @@ MODELS: dict[str, Model] = {
             "US",
             "OpenMDW-1.1",
             "https://openmdw.ai/license/1-1/",
-            id_verified=False,
         ),
-        Model(
-            "nvidia/nemotron-3-super-120b-a12b",
-            "US",
-            "NVIDIA open model licence (not yet checked)",
-        ),
-        Model(
-            "mistralai/devstral-2-123b-instruct-2512",
-            "FR",
-            "Mistral Modified MIT",
-            "https://huggingface.co/mistralai/Devstral-2-123B-Instruct-2512/raw/main/LICENSE",
-            notice=DEVSTRAL_2_NOTICE,
-        ),
-        Model(
-            "mistralai/devstral-small-2505",
-            "FR",
-            "Apache-2.0",
-            id_verified=False,
-        ),
+        Model("nvidia/nemotron-3-ultra-550b-a55b", "US", "not yet checked"),
+        Model("nvidia/nemotron-3.5-lightning-30b-a3b", "US", "not yet checked"),
         # research-all only
-        Model("z-ai/glm-5.1", "CN", "not yet checked"),
-        Model("moonshotai/kimi-k2.5", "CN", "Moonshot Modified MIT", notice=KIMI_NOTICE),
-        Model("qwen/qwen3.5-122b-a10b", "CN", "not yet checked"),
-        Model("minimaxai/minimax-m2.5", "CN", "not yet checked"),
+        Model("z-ai/glm-5.3-flash", "CN", "not yet checked"),
+        Model("moonshotai/kimi-k3.1-pro", "CN", "not yet checked"),
+        Model("minimaxai/minimax-m3.1-flash", "CN", "not yet checked"),
     ]
 }
 
-NEMOTRON_35 = "nvidia/nemotron-3.5-super-vl-120b-a12b"
-NEMOTRON_3 = "nvidia/nemotron-3-super-120b-a12b"
-DEVSTRAL_2 = "mistralai/devstral-2-123b-instruct-2512"
-DEVSTRAL_SMALL = "mistralai/devstral-small-2505"
+SUPER_VL = "nvidia/nemotron-3.5-super-vl-120b-a12b"  # 1M context, tool calling
+ULTRA = "nvidia/nemotron-3-ultra-550b-a55b"
+LIGHTNING = "nvidia/nemotron-3.5-lightning-30b-a3b"  # small and fast
 
 PROFILES: dict[str, dict[str, list[str]]] = {
     "us-eu-origin": {
-        "nim-explore": [NEMOTRON_35, NEMOTRON_3],
-        "nim-plan": [NEMOTRON_35, NEMOTRON_3],
-        "nim-code": [DEVSTRAL_2, DEVSTRAL_SMALL],
-        "nim-research": [NEMOTRON_3, NEMOTRON_35],
+        "nim-explore": [LIGHTNING, SUPER_VL],
+        "nim-plan": [SUPER_VL, ULTRA],
+        "nim-code": [ULTRA, SUPER_VL],
+        "nim-research": [SUPER_VL, LIGHTNING],
     },
     "permissive": {
-        "nim-explore": [NEMOTRON_35],
-        "nim-plan": [NEMOTRON_35],
-        "nim-code": [DEVSTRAL_SMALL, NEMOTRON_35],
-        "nim-research": [NEMOTRON_35],
+        "nim-explore": [SUPER_VL],
+        "nim-plan": [SUPER_VL],
+        "nim-code": [SUPER_VL],
+        "nim-research": [SUPER_VL],
     },
     "research-all": {
-        "nim-explore": [NEMOTRON_3, "moonshotai/kimi-k2.5"],
-        "nim-plan": ["z-ai/glm-5.1", NEMOTRON_35],
-        "nim-code": ["qwen/qwen3.5-122b-a10b", DEVSTRAL_2],
-        "nim-research": ["minimaxai/minimax-m2.5", NEMOTRON_3],
+        "nim-explore": ["minimaxai/minimax-m3.1-flash", LIGHTNING],
+        "nim-plan": ["z-ai/glm-5.3-flash", SUPER_VL],
+        "nim-code": ["moonshotai/kimi-k3.1-pro", ULTRA],
+        "nim-research": ["minimaxai/minimax-m3.1-flash", SUPER_VL],
     },
 }
 
@@ -115,7 +86,7 @@ PROFILE_DESCRIPTIONS = {
 
 PROFILE_WARNINGS = {
     "research-all": (
-        "research-all includes models developed in the PRC (GLM, Kimi, Qwen, "
+        "research-all includes models developed in the PRC (GLM, Kimi, "
         "MiniMax). Some organisations, including US federal contractors, may be "
         "barred from using some of them. Check your own obligations."
     ),

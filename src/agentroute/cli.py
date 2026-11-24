@@ -114,14 +114,41 @@ def cmd_doctor(args, state: State, out: Callable[[str], None]) -> int:
         "Free-tier notice not accepted (or its text changed); run `agentroute init`",
     )
 
+    if state.profile in PROFILES and _key_looks_valid(key) and not args.offline:
+        try:
+            hosted = hosted_model_ids(key)
+        except OSError as err:
+            out(f"[note] Could not read NVIDIA's model list ({err.__class__.__name__}); skipped.")
+        else:
+            missing = [m.id for m in models_in(state.profile) if m.id not in hosted]
+            check(
+                not missing,
+                f"All {state.profile} models are on NVIDIA's hosted list",
+                "Not on NVIDIA's hosted list: " + ", ".join(missing),
+            )
+
     if state.profile in PROFILES:
-        unverified = [m.id for m in models_in(state.profile) if not m.id_verified]
-        for model_id in unverified:
-            out(f"[note] Model id not yet confirmed on build.nvidia.com: {model_id}")
+        for model in models_in(state.profile):
+            if model.license == "not yet checked":
+                out(f"[note] Licence not yet checked: {model.id}")
 
     out("")
     out("All checks passed." if not failures else f"{failures} check(s) failed.")
     return 0 if not failures else 1
+
+
+NVIDIA_MODELS_URL = "https://integrate.api.nvidia.com/v1/models"
+
+
+def hosted_model_ids(key: str, timeout: float = 15.0) -> set[str]:
+    """Model ids on NVIDIA's hosted API. Sends only the key, no prompts."""
+    import json
+    import urllib.request
+
+    request = urllib.request.Request(NVIDIA_MODELS_URL, headers={"Authorization": f"Bearer {key}"})
+    with urllib.request.urlopen(request, timeout=timeout) as resp:
+        data = json.load(resp)
+    return {m["id"] for m in data.get("data", [])}
 
 
 def _key_looks_valid(key: str) -> bool:
@@ -192,7 +219,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     sub.add_parser("profiles", help="List model profiles and their routes.")
-    sub.add_parser("doctor", help="Check that everything is set up.")
+    p_doctor = sub.add_parser("doctor", help="Check that everything is set up.")
+    p_doctor.add_argument(
+        "--offline", action="store_true", help="Skip checking NVIDIA's live model list."
+    )
 
     p_launch = sub.add_parser(
         "launch",

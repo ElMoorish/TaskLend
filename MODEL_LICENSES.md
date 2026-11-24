@@ -1,17 +1,19 @@
 # Model licences
 
 These notices are for your information. Check each licence yourself before you
-rely on a model.
+rely on a model. Every model below was on NVIDIA's hosted model list on
+2026-11-24; `agentroute doctor` re-checks the live list.
 
 | Model | Profiles | Licence | Notes |
 | --- | --- | --- | --- |
-| `nvidia/nemotron-3.5-super-vl-120b-a12b` | us-eu-origin, permissive, research-all | [OpenMDW-1.1](https://openmdw.ai/license/1-1/) | Commercial use allowed. API id not yet confirmed. |
-| `nvidia/nemotron-3-super-120b-a12b` | us-eu-origin, research-all | Not yet checked | |
-| `mistralai/devstral-2-123b-instruct-2512` | us-eu-origin, research-all | [Mistral Modified MIT](https://huggingface.co/mistralai/Devstral-2-123B-Instruct-2512/raw/main/LICENSE) | No rights under this licence if your company's, or your employer's, global revenue topped $20M in the previous month. Internal use is not exempt. |
-| `mistralai/devstral-small-2505` | us-eu-origin, permissive | Apache 2.0 | API id not yet confirmed. |
-| `z-ai/glm-5.1` | research-all | Not yet checked | PRC origin. |
-| `moonshotai/kimi-k2.5` | research-all | Moonshot Modified MIT | Kimi attribution required above 100M MAU or $20M monthly revenue. PRC origin. |
-| `qwen/qwen3.5-122b-a10b` | research-all | Not yet checked | PRC origin. |
-| `minimaxai/minimax-m2.5` | research-all | Not yet checked | PRC origin. |
+| `nvidia/nemotron-3.5-super-vl-120b-a12b` | all | [OpenMDW-1.1](https://openmdw.ai/license/1-1/) | Commercial use allowed. 1M context, tool calling. |
+| `nvidia/nemotron-3-ultra-550b-a55b` | us-eu-origin, research-all | Not yet checked | |
+| `nvidia/nemotron-3.5-lightning-30b-a3b` | us-eu-origin, research-all | Not yet checked | |
+| `z-ai/glm-5.3-flash` | research-all | Not yet checked | PRC origin. |
+| `moonshotai/kimi-k3.1-pro` | research-all | Not yet checked | PRC origin. |
+| `minimaxai/minimax-m3.1-flash` | research-all | Not yet checked | PRC origin. |
 
-DeepSeek and Codestral models are not in any profile.
+DeepSeek and Codestral models are not in any profile. Devstral 2, Devstral
+Small, Nemotron 3 Super, Qwen 3.5 and the older Kimi, GLM and MiniMax models
+from the design docs are no longer on NVIDIA's hosted list, so they were
+removed.
