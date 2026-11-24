@@ -1,0 +1,48 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.11", "3.13"]
+    steps:
+      # Actions are pinned to full commit SHAs (supply-chain hygiene, see SECURITY.md).
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install from the lockfile
+        run: uv sync --locked
+      - name: Run tests
+        run: uv run pytest -q
+
+  live-proxy:
+    # Starts a real LiteLLM proxy on loopback with a dummy key. Sends nothing upstream.
+    name: live proxy (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - name: Run the live proxy test
+        env:
+          TASKLEND_LIVE_TESTS: "1"
+        run: uv run pytest -q tests/test_proxy_live.py
