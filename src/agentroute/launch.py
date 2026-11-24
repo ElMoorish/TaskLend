@@ -39,6 +39,9 @@ Run it with your Bash tool from the project directory. Roles:
 {roles}
 
 Workers cannot see this conversation, so put everything they need in the task.
+Name the files or folders the worker should read (for example "read the code
+in src/agentroute/, not just the README"); workers given exact paths do much
+better work than workers left to find things on their own.
 Workers start with no tools beyond those of their role and cannot run commands.
 Their output is capped; the path of the full output is printed at the end.
 Treat worker output as a draft: check it before relying on it, and review any

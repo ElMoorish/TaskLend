@@ -137,3 +137,13 @@ def test_clean_stderr_drops_diagnostic_tags():
     err = '[claude-code:unrecognized_model] {"model":"nim-explore"}\nreal problem\n'
     assert worker.clean_stderr(err) == "real problem"
     assert worker.clean_stderr("") == ""
+
+
+def test_orchestrator_prompt_asks_for_file_names():
+    assert "Name the files or folders" in orchestrator_prompt("agentroute work")
+
+
+def test_default_explore_uses_super_vl_first():
+    from agentroute.profiles import get_profile
+
+    assert get_profile("us-eu-origin")["nim-explore"][0] == "nvidia/nemotron-3.5-super-vl-120b-a12b"

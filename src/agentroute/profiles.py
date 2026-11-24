@@ -62,7 +62,7 @@ LIGHTNING = "nvidia/nemotron-3.5-lightning-30b-a3b"  # small and fast
 
 PROFILES: dict[str, dict[str, list[str]]] = {
     "us-eu-origin": {
-        "nim-explore": [LIGHTNING, SUPER_VL],
+        "nim-explore": [SUPER_VL, LIGHTNING],
         "nim-plan": [SUPER_VL, ULTRA],
         "nim-code": [ULTRA, SUPER_VL],
         "nim-research": [SUPER_VL, LIGHTNING],
