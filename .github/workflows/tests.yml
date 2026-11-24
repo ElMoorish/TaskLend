@@ -9,6 +9,11 @@ on:
 permissions:
   contents: read
 
+# Cancel an older run of the same branch when a newer commit arrives.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: ${{ matrix.os }} / Python ${{ matrix.python }}
