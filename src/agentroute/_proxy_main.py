@@ -7,6 +7,14 @@ server, with no launcher in between) after adding one middleware that answers
 
 from __future__ import annotations
 
+import os
+
+# A random token the parent passes in, served back on IDENTITY_PATH so the
+# parent can prove it is talking to this process and not something else that
+# grabbed the port. It grants nothing.
+IDENTITY_ENV = "AGENTROUTE_PROXY_IDENTITY"
+IDENTITY_PATH = "/agentroute/identity"
+
 BLOCKED_PREFIXES = (
     "/ui",
     "/sso",
@@ -28,8 +36,12 @@ def main() -> None:
     from litellm.proxy.proxy_cli import run_server
     from starlette.responses import PlainTextResponse
 
+    identity = os.environ.pop(IDENTITY_ENV, "")
+
     @proxy_server.app.middleware("http")
     async def _block_admin_routes(request, call_next):
+        if request.url.path == IDENTITY_PATH and request.method == "GET":
+            return PlainTextResponse(identity)
         if is_blocked(request.url.path):
             return PlainTextResponse("Not found", status_code=404)
         return await call_next(request)

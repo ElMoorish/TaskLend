@@ -9,6 +9,7 @@ interface or serves the unauthenticated SSO debug routes, and stop it on exit.
 from __future__ import annotations
 
 import os
+import secrets
 import shutil
 import subprocess
 import sys
@@ -30,6 +31,7 @@ from .proxy import (
     reachable_from_outside,
     write_config,
 )
+from ._proxy_main import IDENTITY_ENV, IDENTITY_PATH
 
 SSO_PROBE_PATHS = ("/sso/debug/login", "/sso/debug/callback", "/ui")
 SAFE_PROBE_STATUSES = {401, 403, 404, 405}
@@ -37,6 +39,13 @@ SAFE_PROBE_STATUSES = {401, 403, 404, 405}
 
 class ProxyError(RuntimeError):
     pass
+
+
+class PortTaken(Exception):
+    """The chosen port was taken by another process before LiteLLM bound it."""
+
+
+START_ATTEMPTS = 3
 
 
 def proxy_command() -> list[str]:
@@ -86,6 +95,7 @@ class ProxySession:
     port: int = field(init=False, default=0)
     workdir: Path | None = field(init=False, default=None)
     process: subprocess.Popen | None = field(init=False, default=None)
+    identity: str = field(init=False, default="")
 
     @property
     def base_url(self) -> str:
@@ -104,36 +114,72 @@ class ProxySession:
         self.workdir = Path(tempfile.mkdtemp(prefix="agentroute-"))
         config = write_config(self.profile, self.workdir / "litellm_config.json")
         self.master_key = new_master_key()
-        self.port = free_loopback_port()
-        log = open(self.log_path, "wb")
         try:
-            self.process = subprocess.Popen(
-                [*proxy_command(), *proxy_args(config, self.port)],
-                env=proxy_env(self.base_env, self.master_key),
-                stdout=log,
-                stderr=subprocess.STDOUT,
-                stdin=subprocess.DEVNULL,
-            )
-        finally:
-            log.close()
-        try:
-            self._wait_ready()
+            for attempt in range(1, START_ATTEMPTS + 1):
+                try:
+                    self._spawn(config)
+                    self._wait_ready()
+                    break
+                except PortTaken:
+                    self._kill_child()
+                    if attempt == START_ATTEMPTS:
+                        raise ProxyError(
+                            "Could not get a free local port for the proxy.\n" + self.log_tail()
+                        ) from None
             self._check_exposure()
         except BaseException:
             self.stop()
             raise
         return self
 
+    def _spawn(self, config: Path) -> None:
+        # The port is chosen, then released, then bound by LiteLLM, so another
+        # process can take it in between. _wait_ready detects that (identity
+        # token) and start() retries on a new port.
+        self.port = free_loopback_port()
+        self.identity = secrets.token_urlsafe(24)
+        env = proxy_env(self.base_env, self.master_key)
+        env[IDENTITY_ENV] = self.identity
+        with open(self.log_path, "wb") as log:
+            self.process = subprocess.Popen(
+                [*proxy_command(), *proxy_args(config, self.port)],
+                env=env,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL,
+            )
+
+    def _is_ours(self) -> bool | None:
+        """True if our proxy answers, False if something else does, None if nothing."""
+        try:
+            with urllib.request.urlopen(self.base_url + IDENTITY_PATH, timeout=2.0) as resp:
+                return resp.read().decode("utf-8", "replace").strip() == self.identity
+        except urllib.error.HTTPError:
+            return False
+        except (urllib.error.URLError, OSError):
+            return None
+
     def _wait_ready(self) -> None:
         deadline = time.monotonic() + self.startup_timeout
-        url = self.base_url + "/health/liveliness"
         while time.monotonic() < deadline:
-            if self.process and self.process.poll() is not None:
-                raise ProxyError("LiteLLM exited during startup.\n" + self.log_tail())
-            if http_status(url) == 200:
+            ours = self._is_ours()
+            if ours:
                 return
+            if self.process and self.process.poll() is not None:
+                if "address already in use" in self.log_tail(80).lower() or "10048" in self.log_tail(80):
+                    raise PortTaken()
+                raise ProxyError("LiteLLM exited during startup.\n" + self.log_tail())
+            if ours is False:
+                # Another program is listening on our port: never send it the key.
+                raise PortTaken()
             time.sleep(0.5)
         raise ProxyError("LiteLLM did not become ready in time.\n" + self.log_tail())
+
+    def _kill_child(self) -> None:
+        if self.process and self.process.poll() is None:
+            self.process.kill()
+            self.process.wait(timeout=10)
+        self.process = None
 
     def _check_exposure(self) -> None:
         exposed = reachable_from_outside(self.port)
