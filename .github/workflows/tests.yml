@@ -17,6 +17,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python: ["3.11", "3.13"]
+        # macOS minutes count 10x on private repos; one version is enough there.
+        exclude:
+          - os: macos-latest
+            python: "3.11"
     steps:
       # Actions are pinned to full commit SHAs (supply-chain hygiene, see SECURITY.md).
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
