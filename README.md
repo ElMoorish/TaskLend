@@ -54,6 +54,21 @@ uv run agentroute launch
 Arguments after `--` go to `claude` unchanged, for example
 `uv run agentroute launch -- --continue`.
 
+### From the Claude Desktop app
+
+The Desktop app starts Claude Code itself, so `agentroute launch` isn't used
+there. Instead, run this once in a terminal:
+
+```
+uv run agentroute install-skill
+```
+
+It adds an `agentroute` skill to your Claude Code skills folder, so every
+session, including the Desktop app's, knows how to dispatch workers. Outside
+`launch`, each worker starts its own private proxy and stops it when done,
+which adds about 15 seconds per worker. Remove the skill with
+`uv run agentroute install-skill --remove`.
+
 `NVIDIA_NIM_API_KEY` must be set in your environment. AgentRoute never writes
 API keys to disk and never reads or stores your Anthropic credentials.
 

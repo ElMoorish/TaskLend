@@ -92,7 +92,7 @@ def cmd_doctor(args, state: State, out: Callable[[str], None]) -> int:
         "Claude Code (`claude`) not found on PATH",
     )
 
-    key = os.environ.get(NVIDIA_KEY_ENV, "")
+    key = nvidia_key()
     check(
         _key_looks_valid(key),
         f"{NVIDIA_KEY_ENV} is set",
@@ -193,9 +193,11 @@ def cmd_launch(args, state: State, out: Callable[[str], None], ask: Callable[[st
     if installed != LITELLM_PIN:
         out(f"LiteLLM is {installed or 'not installed'}; AgentRoute needs exactly {LITELLM_PIN}.")
         return 1
-    if not _key_looks_valid(os.environ.get(NVIDIA_KEY_ENV, "")):
+    key = nvidia_key()
+    if not _key_looks_valid(key):
         out(f"Set {NVIDIA_KEY_ENV} to your nvapi- key first.")
         return 1
+    os.environ[NVIDIA_KEY_ENV] = key
     redirect = main_session_redirect(os.environ)
     if redirect and not args.keep_base_url:
         out(
@@ -217,13 +219,38 @@ def cmd_launch(args, state: State, out: Callable[[str], None], ask: Callable[[st
         return 1
 
 
-def cmd_work(args, out: Callable[[str], None]) -> int:
-    from .worker import WorkerError, run_worker
+def nvidia_key(env=os.environ) -> str:
+    """The NVIDIA key from the environment, or on Windows from the user's saved
+    environment (apps started before `setx` don't see it yet)."""
+    key = env.get(NVIDIA_KEY_ENV, "")
+    if key or sys.platform != "win32":
+        return key
+    try:
+        import winreg
+
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment") as reg:
+            value, _ = winreg.QueryValueEx(reg, NVIDIA_KEY_ENV)
+            return str(value)
+    except OSError:
+        return ""
+
+
+def cmd_work(args, state: State, out: Callable[[str], None]) -> int:
+    from .worker import ENV_SESSION_KEY, WorkerError, run_worker
+
+    def run(env) -> tuple[int, str, object]:
+        return run_worker(
+            args.role, args.task, env, timeout=args.timeout, output_cap=args.max_chars
+        )
 
     try:
-        code, output, saved = run_worker(
-            args.role, args.task, os.environ, timeout=args.timeout, output_cap=args.max_chars
-        )
+        if os.environ.get(ENV_SESSION_KEY):
+            code, output, saved = run(os.environ)
+        else:
+            result = _work_standalone(state, out, run)
+            if isinstance(result, int):
+                return result
+            code, output, saved = result
     except WorkerError as err:
         out(str(err))
         return 1
@@ -231,6 +258,53 @@ def cmd_work(args, out: Callable[[str], None]) -> int:
     out("")
     out(f"[agentroute] worker {args.role} exited {code}. Full output: {saved}")
     return code
+
+
+def _work_standalone(state: State, out, run):
+    """Run one worker outside `agentroute launch` (e.g. from the Claude Desktop
+    app): start a private proxy for this worker only, then stop it. The proxy
+    key lives only in memory for the length of this call."""
+    from .runtime import ProxyError, ProxySession
+    from .state import config_dir
+    from .worker import ENV_PROFILE, ENV_PROXY_URL, ENV_SESSION_DIR, ENV_SESSION_KEY
+
+    if state.profile not in PROFILES:
+        out("No profile chosen yet. Ask the user to run `agentroute init` in a terminal.")
+        return 1
+    if not is_accepted(state, FREE_TIER_KEY, FREE_TIER_WARNING):
+        out("The free-tier notice has not been accepted. Ask the user to run `agentroute init`.")
+        return 1
+    key = nvidia_key()
+    if not _key_looks_valid(key):
+        out(f"{NVIDIA_KEY_ENV} is not set. Ask the user to set it (see the README).")
+        return 1
+    base = dict(os.environ)
+    base[NVIDIA_KEY_ENV] = key
+    try:
+        with ProxySession(state.profile, base_env=base) as session:
+            env = dict(base)
+            env.pop(NVIDIA_KEY_ENV)  # workers only need the proxy key
+            env[ENV_PROXY_URL] = session.base_url
+            env[ENV_SESSION_KEY] = session.master_key
+            env[ENV_SESSION_DIR] = str(config_dir() / "standalone")
+            env[ENV_PROFILE] = state.profile
+            return run(env)
+    except ProxyError as err:
+        out(f"Could not start the proxy: {err}")
+        return 1
+
+
+def cmd_install_skill(args, out: Callable[[str], None]) -> int:
+    from .skill import install_skill, remove_skill
+
+    if args.remove:
+        path = remove_skill()
+        out(f"Removed {path}" if path else "No AgentRoute skill was installed.")
+        return 0
+    path = install_skill()
+    out(f"Installed the AgentRoute skill at {path}")
+    out("Claude Code sessions, including the Desktop app, can now dispatch workers.")
+    return 0
 
 
 def _utf8_stdio() -> None:
@@ -282,7 +356,7 @@ def build_parser() -> argparse.ArgumentParser:
     from .worker import DEFAULT_OUTPUT_CAP, ROLES as WORKER_ROLES
 
     p_work = sub.add_parser(
-        "work", help="Run one worker agent (used by Claude inside `agentroute launch`)."
+        "work", help="Run one worker agent (Claude runs this to delegate a task)."
     )
     p_work.add_argument("--role", required=True, choices=list(WORKER_ROLES))
     p_work.add_argument("--timeout", type=float, default=900, help="Seconds (default 900).")
@@ -291,6 +365,12 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"Cap on output returned (default {DEFAULT_OUTPUT_CAP}).",
     )
     p_work.add_argument("task")
+
+    p_skill = sub.add_parser(
+        "install-skill",
+        help="Teach Claude Code (including the Desktop app) how to dispatch workers.",
+    )
+    p_skill.add_argument("--remove", action="store_true", help="Remove the skill instead.")
     return parser
 
 
@@ -312,7 +392,9 @@ def main(
     if args.command == "launch":
         return cmd_launch(args, state, out, ask)
     if args.command == "work":
-        return cmd_work(args, out)
+        return cmd_work(args, state, out)
+    if args.command == "install-skill":
+        return cmd_install_skill(args, out)
     return 2
 
 
