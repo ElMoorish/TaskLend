@@ -132,6 +132,15 @@ def cap_output(text: str, limit: int = DEFAULT_OUTPUT_CAP) -> str:
     return f"{head}\n\n[... {len(text) - len(head) - len(tail)} characters cut; full output in the saved file ...]\n\n{tail}"
 
 
+# Claude Code's machine-readable diagnostic tags, e.g.
+# [claude-code:unrecognized_model] {...}. Expected for proxy role names; noise here.
+_DIAG_TAG = re.compile(r"^\[claude-code:[a-z_]+\]")
+
+
+def clean_stderr(err: str) -> str:
+    return "\n".join(line for line in err.splitlines() if not _DIAG_TAG.match(line.strip()))
+
+
 def _slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:40] or "task"
 
@@ -196,6 +205,7 @@ def run_worker(
         if isinstance(out, bytes):
             out = out.decode("utf-8", "replace")
 
+    err = clean_stderr(err)
     full = out if not err.strip() else f"{out}\n\n[stderr]\n{err}"
     full = full.replace(session_key, "<redacted>")
     stamp = _dt.datetime.now().strftime("%Y%m%d-%H%M%S")

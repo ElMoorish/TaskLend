@@ -131,3 +131,9 @@ def test_role_context_is_smallest_window():
 def test_main_env_passes_profile(tmp_path):
     env = main_env({}, FakeSession(), tmp_path)
     assert env[worker.ENV_PROFILE] == "us-eu-origin"
+
+
+def test_clean_stderr_drops_diagnostic_tags():
+    err = '[claude-code:unrecognized_model] {"model":"nim-explore"}\nreal problem\n'
+    assert worker.clean_stderr(err) == "real problem"
+    assert worker.clean_stderr("") == ""
