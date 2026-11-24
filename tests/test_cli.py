@@ -105,3 +105,21 @@ def test_launch_keep_base_url_overrides(monkeypatch):
     monkeypatch.setattr("agentroute.launch.run_launch", lambda *a, **k: 0)
     code, _ = run(["launch", "--keep-base-url"])
     assert code == 0
+
+
+def test_stdout_survives_non_cp1252_text():
+    import io
+    import sys
+
+    from agentroute.cli import _utf8_stdio
+
+    raw = io.BytesIO()
+    old = sys.stdout
+    sys.stdout = io.TextIOWrapper(raw, encoding="cp1252")
+    try:
+        _utf8_stdio()
+        print("about ≈ 3 → done")
+        sys.stdout.flush()
+    finally:
+        sys.stdout = old
+    assert "≈".encode("utf-8") in raw.getvalue()

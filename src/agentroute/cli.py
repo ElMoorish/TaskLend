@@ -233,6 +233,17 @@ def cmd_work(args, out: Callable[[str], None]) -> int:
     return code
 
 
+def _utf8_stdio() -> None:
+    """Model output often has characters a Windows cp1252 console can't encode."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure:
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except (ValueError, OSError):
+                pass
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="agentroute",
@@ -289,6 +300,7 @@ def main(
     out: Callable[[str], None] = print,
     ask: Callable[[str], str] = input,
 ) -> int:
+    _utf8_stdio()
     args = build_parser().parse_args(argv)
     state = State.load()
     if args.command == "init":
