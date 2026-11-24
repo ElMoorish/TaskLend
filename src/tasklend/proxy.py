@@ -22,7 +22,7 @@ LOOPBACK = "127.0.0.1"
 MASTER_KEY_ENV = "LITELLM_MASTER_KEY"
 NVIDIA_KEY_ENV = "NVIDIA_NIM_API_KEY"
 
-# Environment variables that turn on LiteLLM features AgentRoute does not use and
+# Environment variables that turn on LiteLLM features Tasklend does not use and
 # that carry the known unfixed advisories (database, SSO, JWT, UI login,
 # enterprise). If any is set, the proxy must not start.
 FORBIDDEN_ENV = (
@@ -43,7 +43,7 @@ STRIPPED_ENV = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_
 
 
 def new_master_key() -> str:
-    return "sk-ar-" + secrets.token_urlsafe(32)
+    return "sk-tl-" + secrets.token_urlsafe(32)
 
 
 def build_config(profile: str) -> dict:
@@ -101,7 +101,7 @@ def preflight_env(env: Mapping[str, str]) -> list[str]:
     for name in FORBIDDEN_ENV:
         if env.get(name):
             problems.append(
-                f"{name} is set. AgentRoute runs LiteLLM without this feature; unset it."
+                f"{name} is set. Tasklend runs LiteLLM without this feature; unset it."
             )
     return problems
 

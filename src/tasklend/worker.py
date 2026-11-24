@@ -2,7 +2,7 @@
 
 A worker is a separate `claude --bare -p` process. In bare mode Claude Code
 never reads OAuth tokens or the keychain, and its only credential is
-ANTHROPIC_API_KEY, which AgentRoute sets to the per-session proxy key. Its
+ANTHROPIC_API_KEY, which Tasklend sets to the per-session proxy key. Its
 config dir is a private session folder, so the user's own Claude login and
 settings are never seen by a worker. The main Claude session is not involved.
 """
@@ -19,10 +19,10 @@ from typing import Mapping
 
 # Environment the launcher gives the main Claude session so workers can find
 # the proxy. These are local-only values that die with the session.
-ENV_PROXY_URL = "AGENTROUTE_PROXY_URL"
-ENV_SESSION_KEY = "AGENTROUTE_SESSION_KEY"
-ENV_SESSION_DIR = "AGENTROUTE_SESSION_DIR"
-ENV_PROFILE = "AGENTROUTE_PROFILE"
+ENV_PROXY_URL = "TASKLEND_PROXY_URL"
+ENV_SESSION_KEY = "TASKLEND_SESSION_KEY"
+ENV_SESSION_DIR = "TASKLEND_SESSION_DIR"
+ENV_PROFILE = "TASKLEND_PROFILE"
 
 # Anything that could carry the user's Anthropic credentials or redirect auth.
 CREDENTIAL_ENV = (
@@ -163,7 +163,7 @@ def run_worker(
     session_key = env.get(ENV_SESSION_KEY)
     session_dir = env.get(ENV_SESSION_DIR)
     if not (proxy_url and session_key and session_dir):
-        raise WorkerError("No AgentRoute session found. Start one with `agentroute launch`.")
+        raise WorkerError("No Tasklend session found. Start one with `tasklend launch`.")
     claude = shutil.which("claude")
     if not claude:
         raise WorkerError("Claude Code (`claude`) not found on PATH.")

@@ -1,6 +1,6 @@
 import json
 
-from agentroute import proxy
+from tasklend import proxy
 
 
 def test_master_key_is_random_and_long():
@@ -56,8 +56,8 @@ def test_proxy_env_strips_anthropic_credentials_and_forbidden_vars():
         "CLAUDE_CODE_OAUTH_TOKEN": "secret",
         "DATABASE_URL": "postgres://x",
     }
-    env = proxy.proxy_env(base, "sk-ar-test")
+    env = proxy.proxy_env(base, "sk-tl-test")
     assert env["PATH"] == "/bin"
-    assert env["LITELLM_MASTER_KEY"] == "sk-ar-test"
+    assert env["LITELLM_MASTER_KEY"] == "sk-tl-test"
     for name in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN", "DATABASE_URL"):
         assert name not in env

@@ -28,14 +28,14 @@ class Model:
     origin: str  # country of the model's developer: "US", "FR", "CN"
     license: str
     license_url: str | None = None
-    # Informational notice shown in `agentroute init` when the model is in use.
+    # Informational notice shown in `tasklend init` when the model is in use.
     notice: str | None = None
     # Context window in tokens, when known. Unknown windows use a safe default.
     context_tokens: int | None = None
 
 
 # Every id below was on NVIDIA's hosted model list (integrate.api.nvidia.com/v1/models)
-# on 2026-11-24. `agentroute doctor` re-checks against the live list.
+# on 2026-11-24. `tasklend doctor` re-checks against the live list.
 # Licences marked "not yet checked" must be read on the model card before release.
 MODELS: dict[str, Model] = {
     m.id: m

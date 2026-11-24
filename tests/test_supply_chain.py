@@ -5,9 +5,9 @@ import sys
 from importlib import metadata
 from pathlib import Path
 
-import agentroute
+import tasklend
 
-SRC = Path(agentroute.__file__).parent
+SRC = Path(tasklend.__file__).parent
 
 # Files dropped by the trojanized LiteLLM 1.107.0 release (2026-10-21).
 MALICIOUS_FILES = ("litellm_init.pth", "cook.pth", "cook.py")
@@ -20,12 +20,12 @@ def site_dirs():
 
 
 def test_litellm_pin_matches():
-    assert metadata.version("litellm") == agentroute.LITELLM_PIN
+    assert metadata.version("litellm") == tasklend.LITELLM_PIN
 
 
 def test_pyproject_pins_litellm_exactly():
     pyproject = (SRC.parent.parent / "pyproject.toml").read_text(encoding="utf-8")
-    assert f'"litellm[proxy]=={agentroute.LITELLM_PIN}"' in pyproject
+    assert f'"litellm[proxy]=={tasklend.LITELLM_PIN}"' in pyproject
 
 
 def test_no_known_malicious_files_installed():

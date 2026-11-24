@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from agentroute import skill
-from agentroute.cli import main
+from tasklend import skill
+from tasklend.cli import main
 
 
 def run(argv, answers=()):
@@ -16,8 +16,8 @@ def test_install_skill_writes_instructions():
     assert code == 0
     path = skill.skill_dir() / "SKILL.md"
     text = path.read_text(encoding="utf-8")
-    assert text.startswith("---\nname: agentroute\n")
-    assert "-m agentroute work" in text
+    assert text.startswith("---\nname: tasklend\n")
+    assert "-m tasklend work" in text
     assert "Name the files or folders" in text
 
 
@@ -43,15 +43,15 @@ def test_install_skill_never_overwrites_foreign_file():
 
 
 def test_work_without_session_needs_init(monkeypatch):
-    for name in ("AGENTROUTE_SESSION_KEY", "AGENTROUTE_PROXY_URL"):
+    for name in ("TASKLEND_SESSION_KEY", "TASKLEND_PROXY_URL"):
         monkeypatch.delenv(name, raising=False)
     code, out = run(["work", "--role", "explore", "x"])
     assert code == 1
-    assert "agentroute init" in out
+    assert "tasklend init" in out
 
 
 def test_work_without_session_starts_private_proxy(monkeypatch):
-    monkeypatch.delenv("AGENTROUTE_SESSION_KEY", raising=False)
+    monkeypatch.delenv("TASKLEND_SESSION_KEY", raising=False)
     monkeypatch.setenv("NVIDIA_NIM_API_KEY", "nvapi-" + "x" * 50)
     run(["init"], ["I understand"])
 
@@ -61,7 +61,7 @@ def test_work_without_session_starts_private_proxy(monkeypatch):
         def __init__(self, profile, base_env):
             events.append(("start", profile, base_env["NVIDIA_NIM_API_KEY"][:6]))
             self.base_url = "http://127.0.0.1:9"
-            self.master_key = "sk-ar-temp"
+            self.master_key = "sk-tl-temp"
 
         def __enter__(self):
             return self
@@ -70,12 +70,30 @@ def test_work_without_session_starts_private_proxy(monkeypatch):
             events.append(("stop",))
 
     def fake_run_worker(role, task, env, **kw):
-        events.append(("work", env["AGENTROUTE_SESSION_KEY"], "NVIDIA_NIM_API_KEY" in env))
+        events.append(("work", env["TASKLEND_SESSION_KEY"], "NVIDIA_NIM_API_KEY" in env))
         return 0, "done", Path("out.md")
 
-    monkeypatch.setattr("agentroute.runtime.ProxySession", FakeProxy)
-    monkeypatch.setattr("agentroute.worker.run_worker", fake_run_worker)
+    monkeypatch.setattr("tasklend.runtime.ProxySession", FakeProxy)
+    monkeypatch.setattr("tasklend.worker.run_worker", fake_run_worker)
     code, out = run(["work", "--role", "explore", "x"])
     assert code == 0
-    assert events == [("start", "us-eu-origin", "nvapi-"), ("work", "sk-ar-temp", False), ("stop",)]
+    assert events == [("start", "us-eu-origin", "nvapi-"), ("work", "sk-tl-temp", False), ("stop",)]
     assert "done" in out
+
+
+def test_install_removes_old_agentroute_skill_only_if_ours():
+    old = skill.claude_config_dir() / "skills" / "agentroute"
+    old.mkdir(parents=True)
+    (old / "SKILL.md").write_text("x\n" + skill.LEGACY_MARKER + "\n", encoding="utf-8")
+    code, out = run(["install-skill"])
+    assert code == 0
+    assert not old.exists()
+    assert "old AgentRoute skill" in out
+
+
+def test_install_keeps_foreign_agentroute_skill():
+    old = skill.claude_config_dir() / "skills" / "agentroute"
+    old.mkdir(parents=True)
+    (old / "SKILL.md").write_text("someone else's", encoding="utf-8")
+    run(["install-skill"])
+    assert old.exists()

@@ -1,9 +1,9 @@
-"""`agentroute launch`: run the user's own Claude Code as the orchestrator.
+"""`tasklend launch`: run the user's own Claude Code as the orchestrator.
 
 The main `claude` process is started unmodified, with the user's own login and
-environment. AgentRoute does not set ANTHROPIC_BASE_URL or touch any Anthropic
+environment. Tasklend does not set ANTHROPIC_BASE_URL or touch any Anthropic
 credential for it, so all main-session traffic goes straight to Anthropic. It
-only adds three AGENTROUTE_* variables so that `agentroute work` can reach the
+only adds three TASKLEND_* variables so that `tasklend work` can reach the
 local proxy, plus an appended system prompt explaining how to dispatch workers.
 """
 
@@ -23,13 +23,13 @@ from .worker import ENV_PROFILE, ENV_PROXY_URL, ENV_SESSION_DIR, ENV_SESSION_KEY
 
 
 def work_command() -> str:
-    return f'"{Path(sys.executable).as_posix()}" -m agentroute work'
+    return f'"{Path(sys.executable).as_posix()}" -m tasklend work'
 
 
 def orchestrator_prompt(command: str) -> str:
     roles = "\n".join(f"- {name}: {role.brief}" for name, role in ROLES.items())
     return f"""\
-# AgentRoute worker agents
+# Tasklend worker agents
 
 You are the orchestrator. To save your own context and usage, delegate
 self-contained pieces of work to worker agents that run on open models:
@@ -41,7 +41,7 @@ Run it with your Bash tool from the project directory. Roles:
 
 Workers cannot see this conversation, so put everything they need in the task.
 Name the files or folders the worker should read (for example "read the code
-in src/agentroute/, not just the README"); workers given exact paths do much
+in src/tasklend/, not just the README"); workers given exact paths do much
 better work than workers left to find things on their own.
 Workers start with no tools beyond those of their role and cannot run commands.
 Their output is capped; the path of the full output is printed at the end.

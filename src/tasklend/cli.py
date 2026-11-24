@@ -1,4 +1,4 @@
-"""Command-line entry point: `agentroute`."""
+"""Command-line entry point: `tasklend`."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ from .proxy import NVIDIA_KEY_ENV, preflight_env
 from .state import State
 
 NOT_AFFILIATED = (
-    "AgentRoute is not affiliated with or endorsed by Anthropic or NVIDIA."
+    "Tasklend is not affiliated with or endorsed by Anthropic or NVIDIA."
 )
 
 
@@ -83,7 +83,7 @@ def cmd_doctor(args, state: State, out: Callable[[str], None]) -> int:
     check(
         installed == LITELLM_PIN,
         f"LiteLLM {installed} matches the pin",
-        f"LiteLLM is {installed or 'not installed'}; AgentRoute needs exactly {LITELLM_PIN}",
+        f"LiteLLM is {installed or 'not installed'}; Tasklend needs exactly {LITELLM_PIN}",
     )
 
     check(
@@ -104,7 +104,7 @@ def cmd_doctor(args, state: State, out: Callable[[str], None]) -> int:
         redirect is None,
         "Main Claude session will talk to Anthropic",
         f"ANTHROPIC_BASE_URL={redirect} sends your main Claude session elsewhere; "
-        "clear it for this window (see `agentroute launch`)",
+        "clear it for this window (see `tasklend launch`)",
     )
 
     if redirect is None:
@@ -113,7 +113,7 @@ def cmd_doctor(args, state: State, out: Callable[[str], None]) -> int:
             not leftover,
             "No leftover gateway credentials for the main session",
             f"{' and '.join(leftover)} would override your Anthropic login with a "
-            "credential for another service; clear it for this window (see `agentroute launch`)",
+            "credential for another service; clear it for this window (see `tasklend launch`)",
         )
 
     problems = preflight_env(os.environ)
@@ -122,13 +122,13 @@ def cmd_doctor(args, state: State, out: Callable[[str], None]) -> int:
     check(
         state.profile in PROFILES,
         f"Profile: {state.profile}",
-        "No profile chosen yet; run `agentroute init`",
+        "No profile chosen yet; run `tasklend init`",
     )
 
     check(
         is_accepted(state, FREE_TIER_KEY, FREE_TIER_WARNING),
         "Free-tier notice accepted",
-        "Free-tier notice not accepted (or its text changed); run `agentroute init`",
+        "Free-tier notice not accepted (or its text changed); run `tasklend init`",
     )
 
     if state.profile in PROFILES and _key_looks_valid(key) and not args.offline:
@@ -208,7 +208,7 @@ def cmd_launch(args, state: State, out: Callable[[str], None], ask: Callable[[st
     from .runtime import ProxyError
 
     if state.profile not in PROFILES:
-        out("No profile chosen yet. Run `agentroute init` first.")
+        out("No profile chosen yet. Run `tasklend init` first.")
         return 1
     if not require_acceptance(state, FREE_TIER_KEY, FREE_TIER_WARNING, input_fn=ask, print_fn=out):
         return 1
@@ -218,7 +218,7 @@ def cmd_launch(args, state: State, out: Callable[[str], None], ask: Callable[[st
     except metadata.PackageNotFoundError:
         installed = None
     if installed != LITELLM_PIN:
-        out(f"LiteLLM is {installed or 'not installed'}; AgentRoute needs exactly {LITELLM_PIN}.")
+        out(f"LiteLLM is {installed or 'not installed'}; Tasklend needs exactly {LITELLM_PIN}.")
         return 1
     key = nvidia_key()
     if not _key_looks_valid(key):
@@ -229,7 +229,7 @@ def cmd_launch(args, state: State, out: Callable[[str], None], ask: Callable[[st
     if redirect and not args.keep_base_url:
         out(
             f"ANTHROPIC_BASE_URL is set to {redirect}, so your main Claude session would "
-            "not talk to Anthropic. AgentRoute keeps the main session on Anthropic.\n"
+            "not talk to Anthropic. Tasklend keeps the main session on Anthropic.\n"
             "Clear it for this window, then launch again:\n"
             "  PowerShell: Remove-Item Env:ANTHROPIC_BASE_URL, Env:ANTHROPIC_AUTH_TOKEN\n"
             "  bash:       unset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN\n"
@@ -297,12 +297,12 @@ def cmd_work(args, state: State, out: Callable[[str], None]) -> int:
         return 1
     out(output.rstrip())
     out("")
-    out(f"[agentroute] worker {args.role} exited {code}. Full output: {saved}")
+    out(f"[tasklend] worker {args.role} exited {code}. Full output: {saved}")
     return code
 
 
 def _work_standalone(state: State, out, run):
-    """Run one worker outside `agentroute launch` (e.g. from the Claude Desktop
+    """Run one worker outside `tasklend launch` (e.g. from the Claude Desktop
     app): start a private proxy for this worker only, then stop it. The proxy
     key lives only in memory for the length of this call."""
     from .runtime import ProxyError, ProxySession
@@ -310,10 +310,10 @@ def _work_standalone(state: State, out, run):
     from .worker import ENV_PROFILE, ENV_PROXY_URL, ENV_SESSION_DIR, ENV_SESSION_KEY
 
     if state.profile not in PROFILES:
-        out("No profile chosen yet. Ask the user to run `agentroute init` in a terminal.")
+        out("No profile chosen yet. Ask the user to run `tasklend init` in a terminal.")
         return 1
     if not is_accepted(state, FREE_TIER_KEY, FREE_TIER_WARNING):
-        out("The free-tier notice has not been accepted. Ask the user to run `agentroute init`.")
+        out("The free-tier notice has not been accepted. Ask the user to run `tasklend init`.")
         return 1
     key = nvidia_key()
     if not _key_looks_valid(key):
@@ -336,14 +336,18 @@ def _work_standalone(state: State, out, run):
 
 
 def cmd_install_skill(args, out: Callable[[str], None]) -> int:
-    from .skill import install_skill, remove_skill
+    from .skill import install_skill, remove_legacy_skill, remove_skill
+
+    legacy = remove_legacy_skill()
+    if legacy:
+        out(f"Removed the old AgentRoute skill at {legacy}")
 
     if args.remove:
         path = remove_skill()
-        out(f"Removed {path}" if path else "No AgentRoute skill was installed.")
+        out(f"Removed {path}" if path else "No Tasklend skill was installed.")
         return 0
     path = install_skill()
-    out(f"Installed the AgentRoute skill at {path}")
+    out(f"Installed the Tasklend skill at {path}")
     out("Claude Code sessions, including the Desktop app, can now dispatch workers.")
     return 0
 
@@ -361,11 +365,11 @@ def _utf8_stdio() -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="agentroute",
+        prog="tasklend",
         description="Run Claude Code as the orchestrator with worker subagents on open models.",
         epilog=NOT_AFFILIATED,
     )
-    parser.add_argument("--version", action="version", version=f"agentroute {__version__}")
+    parser.add_argument("--version", action="version", version=f"tasklend {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_init = sub.add_parser("init", help="Choose a model profile and accept the free-tier notice.")

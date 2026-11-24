@@ -2,7 +2,7 @@
 
 Runs LiteLLM's own CLI in this Python process (so stopping it stops the real
 server, with no launcher in between) after adding one middleware that answers
-404 for the admin UI, login and SSO routes. AgentRoute uses none of them.
+404 for the admin UI, login and SSO routes. Tasklend uses none of them.
 """
 
 from __future__ import annotations
@@ -12,8 +12,8 @@ import os
 # A random token the parent passes in, served back on IDENTITY_PATH so the
 # parent can prove it is talking to this process and not something else that
 # grabbed the port. It grants nothing.
-IDENTITY_ENV = "AGENTROUTE_PROXY_IDENTITY"
-IDENTITY_PATH = "/agentroute/identity"
+IDENTITY_ENV = "TASKLEND_PROXY_IDENTITY"
+IDENTITY_PATH = "/tasklend/identity"
 
 BLOCKED_PREFIXES = (
     "/ui",

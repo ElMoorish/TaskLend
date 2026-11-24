@@ -1,5 +1,5 @@
-from agentroute.cli import main
-from agentroute.state import State
+from tasklend.cli import main
+from tasklend.state import State
 
 
 def run(argv, answers=()):
@@ -45,7 +45,7 @@ def test_doctor_reports_missing_setup(monkeypatch):
     monkeypatch.delenv("NVIDIA_NIM_API_KEY", raising=False)
     code, out = run(["doctor"])
     assert code == 1
-    assert "agentroute init" in out
+    assert "tasklend init" in out
 
 
 def _ready(monkeypatch):
@@ -55,18 +55,18 @@ def _ready(monkeypatch):
 
 def test_doctor_flags_models_missing_from_nvidia(monkeypatch):
     _ready(monkeypatch)
-    monkeypatch.setattr("agentroute.cli.hosted_model_ids", lambda key: {"nvidia/other"})
+    monkeypatch.setattr("tasklend.cli.hosted_model_ids", lambda key: {"nvidia/other"})
     code, out = run(["doctor"])
     assert code == 1
     assert "Not on NVIDIA's hosted list" in out
 
 
 def test_doctor_passes_model_check_when_all_hosted(monkeypatch):
-    from agentroute.profiles import models_in
+    from tasklend.profiles import models_in
 
     _ready(monkeypatch)
     ids = {m.id for m in models_in("us-eu-origin")}
-    monkeypatch.setattr("agentroute.cli.hosted_model_ids", lambda key: ids)
+    monkeypatch.setattr("tasklend.cli.hosted_model_ids", lambda key: ids)
     _, out = run(["doctor"])
     assert "All us-eu-origin models are on NVIDIA's hosted list" in out
 
@@ -77,12 +77,12 @@ def test_doctor_offline_skips_network(monkeypatch):
     def boom(key):
         raise AssertionError("network used")
 
-    monkeypatch.setattr("agentroute.cli.hosted_model_ids", boom)
+    monkeypatch.setattr("tasklend.cli.hosted_model_ids", boom)
     run(["doctor", "--offline"])
 
 
 def test_main_session_redirect_detection():
-    from agentroute.cli import main_session_redirect
+    from tasklend.cli import main_session_redirect
 
     assert main_session_redirect({}) is None
     assert main_session_redirect({"ANTHROPIC_BASE_URL": "https://api.anthropic.com"}) is None
@@ -93,7 +93,7 @@ def test_main_session_redirect_detection():
 def test_launch_refuses_redirected_main_session(monkeypatch):
     _ready(monkeypatch)
     monkeypatch.setenv("ANTHROPIC_BASE_URL", "http://localhost:11434")
-    monkeypatch.setattr("agentroute.launch.run_launch", lambda *a, **k: 0)
+    monkeypatch.setattr("tasklend.launch.run_launch", lambda *a, **k: 0)
     code, out = run(["launch"])
     assert code == 1
     assert "Remove-Item Env:ANTHROPIC_BASE_URL" in out
@@ -102,7 +102,7 @@ def test_launch_refuses_redirected_main_session(monkeypatch):
 def test_launch_keep_base_url_overrides(monkeypatch):
     _ready(monkeypatch)
     monkeypatch.setenv("ANTHROPIC_BASE_URL", "http://localhost:11434")
-    monkeypatch.setattr("agentroute.launch.run_launch", lambda *a, **k: 0)
+    monkeypatch.setattr("tasklend.launch.run_launch", lambda *a, **k: 0)
     code, _ = run(["launch", "--keep-base-url"])
     assert code == 0
 
@@ -111,7 +111,7 @@ def test_stdout_survives_non_cp1252_text():
     import io
     import sys
 
-    from agentroute.cli import _utf8_stdio
+    from tasklend.cli import _utf8_stdio
 
     raw = io.BytesIO()
     old = sys.stdout
@@ -129,7 +129,7 @@ def test_stdout_survives_non_cp1252_text():
 
 
 def test_leftover_credentials_detection():
-    from agentroute.cli import leftover_credentials
+    from tasklend.cli import leftover_credentials
 
     assert leftover_credentials({}) == []
     assert leftover_credentials({"ANTHROPIC_API_KEY": "sk-ant-api03-abc"}) == []
@@ -141,7 +141,7 @@ def test_launch_refuses_leftover_token_without_printing_it(monkeypatch):
     _ready(monkeypatch)
     monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
     monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "secret-ollama-token")
-    monkeypatch.setattr("agentroute.launch.run_launch", lambda *a, **k: 0)
+    monkeypatch.setattr("tasklend.launch.run_launch", lambda *a, **k: 0)
     code, out = run(["launch"])
     assert code == 1
     assert "Remove-Item Env:ANTHROPIC_AUTH_TOKEN" in out
@@ -152,7 +152,7 @@ def test_doctor_flags_leftover_token_without_printing_it(monkeypatch):
     _ready(monkeypatch)
     monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
     monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "secret-ollama-token")
-    monkeypatch.setattr("agentroute.cli.hosted_model_ids", lambda key: set())
+    monkeypatch.setattr("tasklend.cli.hosted_model_ids", lambda key: set())
     _, out = run(["doctor"])
     assert "[fail] ANTHROPIC_AUTH_TOKEN" in out
     assert "secret-ollama-token" not in out

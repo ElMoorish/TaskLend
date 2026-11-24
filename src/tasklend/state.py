@@ -15,14 +15,28 @@ from pathlib import Path
 
 
 def config_dir() -> Path:
-    override = os.environ.get("AGENTROUTE_CONFIG_DIR")
+    override = os.environ.get("TASKLEND_CONFIG_DIR")
     if override:
         return Path(override)
     if sys.platform == "win32":
         base = os.environ.get("APPDATA") or str(Path.home() / "AppData" / "Roaming")
-        return Path(base) / "agentroute"
+        return Path(base) / "tasklend"
     base = os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config")
-    return Path(base) / "agentroute"
+    return Path(base) / "tasklend"
+
+
+# The project was called AgentRoute before it became Tasklend.
+LEGACY_NAME = "agentroute"
+
+
+def _migrate_legacy_settings(path: Path) -> None:
+    """Copy settings saved under the old name, once, if there are none yet."""
+    if path.exists() or os.environ.get("TASKLEND_CONFIG_DIR"):
+        return
+    legacy = path.parent.parent / LEGACY_NAME / "settings.json"
+    if legacy.is_file():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(legacy.read_text(encoding="utf-8"), encoding="utf-8")
 
 
 @dataclass
@@ -32,7 +46,9 @@ class State:
 
     @classmethod
     def load(cls, path: Path | None = None) -> "State":
-        path = path or config_dir() / "settings.json"
+        if path is None:
+            path = config_dir() / "settings.json"
+            _migrate_legacy_settings(path)
         if not path.exists():
             return cls()
         data = json.loads(path.read_text(encoding="utf-8"))

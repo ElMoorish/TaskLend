@@ -1,6 +1,6 @@
 # Contributing
 
-AgentRoute is licensed under Apache 2.0. You keep the copyright in your
+Tasklend is licensed under Apache 2.0. You keep the copyright in your
 contributions and license them under Apache 2.0.
 
 Every commit must carry a Developer Certificate of Origin sign-off

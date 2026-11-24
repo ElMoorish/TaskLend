@@ -2,7 +2,7 @@
 
 These notices are for your information. Check each licence yourself before you
 rely on a model. Every model below was on NVIDIA's hosted model list on
-2026-11-24; `agentroute doctor` re-checks the live list.
+2026-11-24; `tasklend doctor` re-checks the live list.
 
 | Model | Profiles | Licence | Notes |
 | --- | --- | --- | --- |

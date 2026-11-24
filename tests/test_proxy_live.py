@@ -1,14 +1,14 @@
 """Starts a real LiteLLM proxy on loopback. Slow (~15 s), so opt in with
-AGENTROUTE_LIVE_TESTS=1. Uses a dummy NVIDIA key and sends nothing upstream."""
+TASKLEND_LIVE_TESTS=1. Uses a dummy NVIDIA key and sends nothing upstream."""
 
 import os
 
 import pytest
 
-from agentroute.runtime import ProxySession, http_status
+from tasklend.runtime import ProxySession, http_status
 
 pytestmark = pytest.mark.skipif(
-    os.environ.get("AGENTROUTE_LIVE_TESTS") != "1", reason="set AGENTROUTE_LIVE_TESTS=1"
+    os.environ.get("TASKLEND_LIVE_TESTS") != "1", reason="set TASKLEND_LIVE_TESTS=1"
 )
 
 

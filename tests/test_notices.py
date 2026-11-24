@@ -1,10 +1,10 @@
-from agentroute.notices import (
+from tasklend.notices import (
     FREE_TIER_KEY,
     FREE_TIER_WARNING,
     is_accepted,
     require_acceptance,
 )
-from agentroute.state import State
+from tasklend.state import State
 
 
 def run(state, answer, text=FREE_TIER_WARNING):
@@ -62,3 +62,22 @@ def test_eof_declines():
     assert not require_acceptance(
         state, FREE_TIER_KEY, FREE_TIER_WARNING, input_fn=eof, print_fn=lambda _: None
     )
+
+
+def test_settings_migrate_from_old_name(tmp_path, monkeypatch):
+    import json
+
+    from tasklend import state as state_mod
+
+    monkeypatch.delenv("TASKLEND_CONFIG_DIR", raising=False)
+    monkeypatch.setattr(state_mod, "config_dir", lambda: tmp_path / "tasklend")
+    legacy = tmp_path / "agentroute"
+    legacy.mkdir()
+    (legacy / "settings.json").write_text(
+        json.dumps({"profile": "permissive", "accepted_notices": {"free-tier": "abc"}}),
+        encoding="utf-8",
+    )
+    loaded = State.load()
+    assert loaded.profile == "permissive"
+    assert loaded.accepted_notices == {"free-tier": "abc"}
+    assert (tmp_path / "tasklend" / "settings.json").exists()

@@ -2,10 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from agentroute import worker
-from agentroute._proxy_main import is_blocked
-from agentroute.launch import main_args, main_env, orchestrator_prompt
-from agentroute.runtime import unsafe_sso_routes
+from tasklend import worker
+from tasklend._proxy_main import is_blocked
+from tasklend.launch import main_args, main_env, orchestrator_prompt
+from tasklend.runtime import unsafe_sso_routes
 
 ROLE = worker.ROLES["code"]
 
@@ -19,10 +19,10 @@ def test_worker_env_strips_user_anthropic_credentials(tmp_path):
         "ANTHROPIC_BASE_URL": "https://example.invalid",
         "CLAUDE_CODE_USE_BEDROCK": "1",
         "ANTHROPIC_MODEL": "opus",
-        worker.ENV_SESSION_KEY: "sk-ar-session",
+        worker.ENV_SESSION_KEY: "sk-tl-session",
     }
-    env = worker.worker_env(base, ROLE, "http://127.0.0.1:4000/v1", "sk-ar-session", tmp_path)
-    assert env["ANTHROPIC_API_KEY"] == "sk-ar-session"
+    env = worker.worker_env(base, ROLE, "http://127.0.0.1:4000/v1", "sk-tl-session", tmp_path)
+    assert env["ANTHROPIC_API_KEY"] == "sk-tl-session"
     assert env["ANTHROPIC_BASE_URL"] == "http://127.0.0.1:4000"  # no /v1
     assert env["CLAUDE_CONFIG_DIR"] == str(tmp_path)
     for name in ("ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CODE_USE_BEDROCK"):
@@ -85,7 +85,7 @@ def test_unsafe_sso_routes():
 
 class FakeSession:
     base_url = "http://127.0.0.1:4321"
-    master_key = "sk-ar-session"
+    master_key = "sk-tl-session"
     profile = "us-eu-origin"
 
 
@@ -107,7 +107,7 @@ def test_main_args_pass_user_args_through():
 
 
 def test_orchestrator_prompt_mentions_roles_and_warning():
-    text = orchestrator_prompt("agentroute work")
+    text = orchestrator_prompt("tasklend work")
     for name in worker.ROLES:
         assert name in text
     assert "train" in text
@@ -121,7 +121,7 @@ def test_worker_env_sets_context_window(tmp_path):
 
 
 def test_role_context_is_smallest_window():
-    from agentroute.profiles import DEFAULT_CONTEXT_TOKENS, role_context_tokens
+    from tasklend.profiles import DEFAULT_CONTEXT_TOKENS, role_context_tokens
 
     assert role_context_tokens("permissive", "nim-plan") == 1_000_000
     # us-eu-origin plan falls back to a model whose window is not yet known
@@ -140,11 +140,11 @@ def test_clean_stderr_drops_diagnostic_tags():
 
 
 def test_orchestrator_prompt_asks_for_file_names():
-    assert "Name the files or folders" in orchestrator_prompt("agentroute work")
+    assert "Name the files or folders" in orchestrator_prompt("tasklend work")
 
 
 def test_default_explore_uses_super_vl_first():
-    from agentroute.profiles import get_profile
+    from tasklend.profiles import get_profile
 
     assert get_profile("us-eu-origin")["nim-explore"][0] == "nvidia/nemotron-3.5-super-vl-120b-a12b"
 

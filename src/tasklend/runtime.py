@@ -8,6 +8,7 @@ interface or serves the unauthenticated SSO debug routes, and stop it on exit.
 
 from __future__ import annotations
 
+import http.client
 import os
 import secrets
 import shutil
@@ -51,7 +52,7 @@ START_ATTEMPTS = 3
 def proxy_command() -> list[str]:
     # Run in this interpreter directly, not via the litellm.exe launcher, so
     # terminating the child stops the real server.
-    return [sys.executable, "-m", "agentroute._proxy_main"]
+    return [sys.executable, "-m", "tasklend._proxy_main"]
 
 
 def _remove_dir(path: Path, attempts: int = 20) -> None:
@@ -111,7 +112,7 @@ class ProxySession:
         problems = preflight_env(self.base_env)
         if problems:
             raise ProxyError("\n".join(problems))
-        self.workdir = Path(tempfile.mkdtemp(prefix="agentroute-"))
+        self.workdir = Path(tempfile.mkdtemp(prefix="tasklend-"))
         config = write_config(self.profile, self.workdir / "litellm_config.json")
         self.master_key = new_master_key()
         try:
@@ -154,7 +155,12 @@ class ProxySession:
         try:
             with urllib.request.urlopen(self.base_url + IDENTITY_PATH, timeout=2.0) as resp:
                 return resp.read().decode("utf-8", "replace").strip() == self.identity
-        except urllib.error.HTTPError:
+        except http.client.RemoteDisconnected:
+            # Closed without a reply (also an OSError): treat as nothing there, as before.
+            return None
+        except (urllib.error.HTTPError, http.client.HTTPException):
+            # An HTTP error status, or a reply that is not HTTP at all (an SSH
+            # banner, say): either way something else holds the port.
             return False
         except (urllib.error.URLError, OSError):
             return None

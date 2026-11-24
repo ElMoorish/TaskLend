@@ -1,6 +1,6 @@
 import pytest
 
-from agentroute.profiles import (
+from tasklend.profiles import (
     BANNED_SUBSTRINGS,
     DEFAULT_PROFILE,
     MODELS,
